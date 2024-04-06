@@ -7,9 +7,9 @@ MainWindow::MainWindow(QWidget *parent, const QString &rootPath)
     mainLayout = new QFormLayout;
     categoryLayout = new QFormLayout;
     labelColor = QColor(Qt::black);
-    categories.push_back(Cate{"MeiShan", 0, false});
-    categories.push_back(Cate{"View", 0, false});
-    categories.push_back(Cate{"Perfect", 0, false});
+    for (int i = 0; i < 100; ++i) {
+        categories.push_back(Cate{QString::asprintf("%2d", i), 0, false});
+    }
 
     root.setPath(rootPath);
     for (const auto &file: root.entryInfoList()) {
@@ -26,6 +26,7 @@ MainWindow::MainWindow(QWidget *parent, const QString &rootPath)
     setSuitableScreenSize();
     updateCategory();
     setLabelColor();
+    updateLabelColor();
 
     connect(this, &MainWindow::currentImageChange, this, &MainWindow::updateInfo);
 }
@@ -36,8 +37,6 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::initUI() {
-    int screenHeight = QGuiApplication::primaryScreen()->size().height();
-    categoryMax = screenHeight / LABEL_HEIGHT;
 
     for (int i = 0; i < categoryMax; ++i) {
         auto *item = new QLabel();
@@ -73,7 +72,21 @@ QPixmap MainWindow::loadPixmap(const QString &filename) {
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
-    switch (event->key()) {
+    if (processToggleImage(event->key())) {
+        emit currentImageChange();
+        update();
+        event->accept();
+    } else if (processToggleCate(event->key())) {
+        emit currentCateChange();
+        updateCategory();
+        updateLabelColor();
+    } else {
+        processToggleWindow(event->key());
+    }
+}
+
+bool MainWindow::processToggleImage(int key) {
+    switch (key) {
         case Qt::Key_Right:
             // Next image
             ++currentFile;
@@ -92,6 +105,14 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
             // Last image
             currentFile = fileInfoList.end() - 1;
             break;
+        default:
+            return false;
+    }
+    return true;
+}
+
+bool MainWindow::processToggleWindow(int key) {
+    switch (key) {
         case Qt::Key_Q:
             // Quit
             this->close();
@@ -104,15 +125,30 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
                 showFullScreen();
             }
             break;
+        default:
+            return false;
+    }
+    return true;
+}
+
+bool MainWindow::processToggleCate(int key) {
+    switch (key) {
         case Qt::Key_N:
+            // Add category
             createNewCate();
             break;
+        case Qt::Key_K:
+            --currentCate;
+            if (currentCate == -1)currentCate = categories.size() - 1;
+            break;
+        case Qt::Key_J:
+            ++currentCate;
+            if (currentCate == categories.size())currentCate = 0;
+            break;
         default:
-            return;
+            return false;
     }
-    emit currentImageChange();
-    update();
-    event->accept();
+    return true;
 }
 
 void MainWindow::setSuitableScreenSize() {
@@ -136,35 +172,40 @@ void MainWindow::updateInfo() {
 }
 
 void MainWindow::updateCategory() {
-    int canDisplay = this->height() / LABEL_HEIGHT;
     int itemIndex = 0;
 
     // Display atLeast
-    int atLeast = qMin(qMax((canDisplay >> 1) - 1, 1), 5);
-    for (int i = qMax(currentCate - atLeast, 0); i < currentCate; ++i) {
+    for (auto i = qMax(currentCate - 4, 0); i < currentCate; ++i) {
         auto *item = qobject_cast<QLabel *>(categoryLayout->itemAt(itemIndex++)->widget());
         assert(item != nullptr);
-        item->setProperty("current",false);
+        item->setProperty("current", false);
         item->setText(categories[i].content);
     }
     // Display current
     auto *current = qobject_cast<QLabel *>(categoryLayout->itemAt(itemIndex++)->widget());
     assert(current != nullptr);
-    current->setProperty("current",true);
+    current->setProperty("current", true);
     current->setText(categories[currentCate].content);
     // Display next
-    for (int i = currentCate + 1; i < canDisplay && i < categories.size() - currentCate; ++i) {
+    for (auto i = currentCate + 1; itemIndex < categoryMax && i < categories.size(); ++i) {
         auto *item = qobject_cast<QLabel *>(categoryLayout->itemAt(itemIndex++)->widget());
         assert(item != nullptr);
-        item->setProperty("current",false);
+        item->setProperty("current", false);
         item->setText(categories[i].content);
+    }
+    // Cleaning
+    while (itemIndex < categoryMax) {
+        auto *item = qobject_cast<QLabel *>(categoryLayout->itemAt(itemIndex++)->widget());
+        assert(item != nullptr);
+        item->setProperty("current", false);
+        item->setText("");
     }
 }
 
 void MainWindow::setLabelColor() {
     QImage image = loadPixmap(currentFile->absoluteFilePath()).toImage();
-    int height = image.height()>>1;
-    int width = image.width()>>1;
+    int height = image.height() >> 1;
+    int width = image.width() >> 1;
     long long all = 0;
     int count = 0;
     for (int i = 0; i < width && i < this->width(); i += qMax(width >> 4, 1)) {
@@ -176,15 +217,11 @@ void MainWindow::setLabelColor() {
         }
     }
     all /= count * 3;
-    QString style = "QLabel {color:%1;}";
     if (all > 150) {
-        style = style.arg("black");
+        labelColor = Qt::black;
     } else {
-        style = style.arg("white");
+        labelColor = Qt::white;
     }
-    style+="QLabel[current=true]{color:red;}";
-    mainWidget->setStyleSheet(style);
-
 }
 
 void MainWindow::createNewCate() {
@@ -195,6 +232,14 @@ void MainWindow::createNewCate() {
         categories.push_back(Cate{newCate, 0, false});
         updateCategory();
     }
+}
+
+void MainWindow::updateLabelColor() {
+    QString selectAll = "QLabel {color:rgb(%1,%2,%3);}";
+    QString selectCur = "QLabel[current=true] {color:rgb(%1,%2,%3);}";
+    QString style = selectAll.arg(labelColor.red()).arg(labelColor.green()).arg(labelColor.blue()) + \
+                    selectCur.arg(currentColor.red()).arg(currentColor.green()).arg(currentColor.blue());
+    mainWidget->setStyleSheet(style);
 }
 
 

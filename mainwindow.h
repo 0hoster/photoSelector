@@ -40,15 +40,16 @@ private:
     QFileInfoList::iterator currentFile;
     // UI
     QColor labelColor;
+    QColor currentColor=Qt::red;
     QLabel *statusLabel;
     QWidget *mainWidget;
     QFormLayout *mainLayout;
     QFormLayout *categoryLayout;
     // Category
     QList<Cate> categories;
-    int currentCate=0;
+    long long currentCate=20;
     const static int LABEL_HEIGHT = 30;
-    int categoryMax = 0;
+    const int categoryMax = 50;
 
     void initUI();
 
@@ -62,7 +63,15 @@ private:
 
     void setLabelColor();
 
+    void updateLabelColor();
+
     void createNewCate();
+
+    bool processToggleImage(int key);
+
+    bool processToggleWindow(int key);
+
+    bool processToggleCate(int key);
 
     QPixmap loadPixmap(const QString &filename);
 
@@ -79,6 +88,7 @@ public:
 signals:
 
     void currentImageChange();
+    void currentCateChange();
 };
 
 #endif // MAINWINDOW_H
