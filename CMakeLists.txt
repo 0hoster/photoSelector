@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
 
-set(CMAKE_PREFIX_PATH "/home/host/Qt/6.5.2/gcc_64")
-
 project(photoSelector VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_AUTOUIC ON)
