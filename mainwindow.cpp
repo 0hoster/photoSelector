@@ -25,6 +25,7 @@ MainWindow::MainWindow(QWidget *parent, const QString &rootPath)
     initSlots();
     setSuitableScreenSize();
     updateCategory();
+    setLabelColor();
 
     connect(this, &MainWindow::currentImageChange, this, &MainWindow::updateInfo);
 }
@@ -131,31 +132,41 @@ void MainWindow::setSuitableScreenSize() {
 
 void MainWindow::updateInfo() {
     statusLabel->setText(currentFile->fileName());
-    updateCategory();
     setLabelColor();
 }
 
 void MainWindow::updateCategory() {
     int canDisplay = this->height() / LABEL_HEIGHT;
-    auto needDisplay = categories.size() - currentCate;
+    int itemIndex = 0;
 
-    for (int i = 0; i < needDisplay && i < canDisplay && i < categoryMax; ++i) {
-        auto *item = qobject_cast<QLabel *>(categoryLayout->itemAt(i)->widget());
-        if (item == nullptr)break;
-        item->setText(categories[currentCate+i].content);
+    // Display atLeast
+    int atLeast = qMin(qMax((canDisplay >> 1) - 1, 1), 5);
+    for (int i = qMax(currentCate - atLeast, 0); i < currentCate; ++i) {
+        auto *item = qobject_cast<QLabel *>(categoryLayout->itemAt(itemIndex++)->widget());
+        assert(item != nullptr);
+        item->setProperty("current",false);
+        item->setText(categories[i].content);
+    }
+    // Display current
+    auto *current = qobject_cast<QLabel *>(categoryLayout->itemAt(itemIndex++)->widget());
+    assert(current != nullptr);
+    current->setProperty("current",true);
+    current->setText(categories[currentCate].content);
+    // Display next
+    for (int i = currentCate + 1; i < canDisplay && i < categories.size() - currentCate; ++i) {
+        auto *item = qobject_cast<QLabel *>(categoryLayout->itemAt(itemIndex++)->widget());
+        assert(item != nullptr);
+        item->setProperty("current",false);
+        item->setText(categories[i].content);
     }
 }
 
 void MainWindow::setLabelColor() {
     QImage image = loadPixmap(currentFile->absoluteFilePath()).toImage();
-    auto lastLayout = categoryLayout->itemAt(categoryLayout->count() - 1);
-    auto label = qobject_cast<QLabel *>((lastLayout)->widget());
-    auto labelPos = label->pos();
-    int height = labelPos.y() + label->minimumHeight();
-    int width = labelPos.x() + label->minimumWidth();
+    int height = image.height()>>1;
+    int width = image.width()>>1;
     long long all = 0;
     int count = 0;
-
     for (int i = 0; i < width && i < this->width(); i += qMax(width >> 4, 1)) {
         for (int j = 0; j < height && j < this->height(); j += qMax(height >> 4, 1)) {
             all += image.pixelColor(i, j).red();
@@ -166,11 +177,12 @@ void MainWindow::setLabelColor() {
     }
     all /= count * 3;
     QString style = "QLabel {color:%1;}";
-    if (all > 180) {
+    if (all > 150) {
         style = style.arg("black");
     } else {
         style = style.arg("white");
     }
+    style+="QLabel[current=true]{color:red;}";
     mainWidget->setStyleSheet(style);
 
 }
@@ -180,7 +192,7 @@ void MainWindow::createNewCate() {
     QString newCate = QInputDialog::getText(this, "New Category", "What 's the new category? 😝", \
     QLineEdit::Normal, "", &ok, Qt::FramelessWindowHint);
     if (ok) {
-        categories.push_back(Cate{newCate,0,false});
+        categories.push_back(Cate{newCate, 0, false});
         updateCategory();
     }
 }
