@@ -23,6 +23,7 @@
 #include <QPalette>
 #include <QColor>
 #include <QImage>
+#include <QInputDialog>
 
 class MainWindow : public QMainWindow {
 Q_OBJECT
@@ -45,7 +46,7 @@ private:
     QFormLayout *categoryLayout;
     // Category
     QList<Cate> categories;
-    QList<Cate>::iterator currentCate;
+    int currentCate=0;
     const static int LABEL_HEIGHT = 30;
     int categoryMax = 0;
 
@@ -60,6 +61,8 @@ private:
     void updateCategory();
 
     void setLabelColor();
+
+    void createNewCate();
 
     QPixmap loadPixmap(const QString &filename);
 

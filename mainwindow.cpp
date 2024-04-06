@@ -8,6 +8,8 @@ MainWindow::MainWindow(QWidget *parent, const QString &rootPath)
     categoryLayout = new QFormLayout;
     labelColor = QColor(Qt::black);
     categories.push_back(Cate{"MeiShan", 0, false});
+    categories.push_back(Cate{"View", 0, false});
+    categories.push_back(Cate{"Perfect", 0, false});
 
     root.setPath(rootPath);
     for (const auto &file: root.entryInfoList()) {
@@ -18,7 +20,6 @@ MainWindow::MainWindow(QWidget *parent, const QString &rootPath)
         }
     }
     currentFile = fileInfoList.begin();
-    currentCate = categories.begin();
     setWindowTitle("Photos Selector - " + rootPath);
     initUI();
     initSlots();
@@ -71,26 +72,42 @@ QPixmap MainWindow::loadPixmap(const QString &filename) {
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
-    if (event->key() == Qt::Key_Right) {
-        ++currentFile;
-        if (currentFile == fileInfoList.end())currentFile = fileInfoList.begin();
-    } else if (event->key() == Qt::Key_Left) {
-        if (currentFile == fileInfoList.begin())currentFile = fileInfoList.end();
-        --currentFile;
-    } else if (event->key() == Qt::Key_Up) {
-        currentFile = fileInfoList.begin();
-    } else if (event->key() == Qt::Key_Down) {
-        currentFile = fileInfoList.end() - 1;
-    } else if (event->key() == Qt::Key_Q) {
-        this->close();
-    } else if (event->key() == Qt::Key_F) {
-        if (isFullScreen()) {
-            showNormal();
-        } else {
-            showFullScreen();
-        }
-    } else {
-        return;
+    switch (event->key()) {
+        case Qt::Key_Right:
+            // Next image
+            ++currentFile;
+            if (currentFile == fileInfoList.end())currentFile = fileInfoList.begin();
+            break;
+        case Qt::Key_Left:
+            // Present image
+            if (currentFile == fileInfoList.begin())currentFile = fileInfoList.end();
+            --currentFile;
+            break;
+        case Qt::Key_Up:
+            // First image
+            currentFile = fileInfoList.begin();
+            break;
+        case Qt::Key_Down:
+            // Last image
+            currentFile = fileInfoList.end() - 1;
+            break;
+        case Qt::Key_Q:
+            // Quit
+            this->close();
+            break;
+        case Qt::Key_F:
+            // Toggle Fullscreen
+            if (isFullScreen()) {
+                showNormal();
+            } else {
+                showFullScreen();
+            }
+            break;
+        case Qt::Key_N:
+            createNewCate();
+            break;
+        default:
+            return;
     }
     emit currentImageChange();
     update();
@@ -120,12 +137,12 @@ void MainWindow::updateInfo() {
 
 void MainWindow::updateCategory() {
     int canDisplay = this->height() / LABEL_HEIGHT;
-    auto needDisplay = categories.end() - currentCate;
+    auto needDisplay = categories.size() - currentCate;
 
     for (int i = 0; i < needDisplay && i < canDisplay && i < categoryMax; ++i) {
         auto *item = qobject_cast<QLabel *>(categoryLayout->itemAt(i)->widget());
         if (item == nullptr)break;
-        item->setText((currentCate + i)->content);
+        item->setText(categories[currentCate+i].content);
     }
 }
 
@@ -156,6 +173,16 @@ void MainWindow::setLabelColor() {
     }
     mainWidget->setStyleSheet(style);
 
+}
+
+void MainWindow::createNewCate() {
+    bool ok = false;
+    QString newCate = QInputDialog::getText(this, "New Category", "What 's the new category? 😝", \
+    QLineEdit::Normal, "", &ok, Qt::FramelessWindowHint);
+    if (ok) {
+        categories.push_back(Cate{newCate,0,false});
+        updateCategory();
+    }
 }
 
 
