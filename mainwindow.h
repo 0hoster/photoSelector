@@ -24,6 +24,7 @@
 #include <QColor>
 #include <QImage>
 #include <QInputDialog>
+#include <QShortcut>
 
 class MainWindow : public QMainWindow {
 Q_OBJECT
@@ -40,20 +41,20 @@ private:
     QFileInfoList::iterator currentFile;
     // UI
     QColor labelColor;
-    QColor currentColor=Qt::red;
+    QColor currentColor = Qt::red;
     QLabel *statusLabel;
     QWidget *mainWidget;
     QFormLayout *mainLayout;
     QFormLayout *categoryLayout;
     // Category
     QList<Cate> categories;
-    long long currentCate=20;
+    long long currentCate = 20;
     const static int LABEL_HEIGHT = 30;
     const int categoryMax = 50;
 
     void initUI();
 
-    void initSlots() const;
+    void initSlots();
 
     void setSuitableScreenSize();
 
@@ -67,18 +68,10 @@ private:
 
     void createNewCate();
 
-    bool processToggleImage(int key);
-
-    bool processToggleWindow(int key);
-
-    bool processToggleCate(QKeyCombination key);
-
     QPixmap loadPixmap(const QString &filename);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
-
-    void keyPressEvent(QKeyEvent *event) override;
 
 public:
     explicit MainWindow(QWidget *parent = nullptr, const QString &rootPath = "");
@@ -88,6 +81,7 @@ public:
 signals:
 
     void currentImageChange();
+
     void currentCateChange();
 };
 

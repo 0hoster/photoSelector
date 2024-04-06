@@ -27,7 +27,6 @@ MainWindow::MainWindow(QWidget *parent, const QString &rootPath)
     updateCategory();
     setLabelColor();
     updateLabelColor();
-
 }
 
 MainWindow::~MainWindow() {
@@ -50,9 +49,95 @@ void MainWindow::initUI() {
     this->setCentralWidget(mainWidget);
 }
 
-void MainWindow::initSlots() const {
-    connect(this, &MainWindow::currentImageChange, this, &MainWindow::updateInfo);
+void MainWindow::initSlots() {
+    auto *imageNext = new QShortcut(QKeySequence(Qt::Key_Right), this);
+    connect(imageNext, &QShortcut::activated, this, [&]() {
+        // Next image
+        ++currentFile;
+        if (currentFile == fileInfoList.end())currentFile = fileInfoList.begin();
+        emit currentImageChange();
+    });
 
+    auto *imagePrevious = new QShortcut(QKeySequence(Qt::Key_Left), this);
+    connect(imagePrevious, &QShortcut::activated, this, [&]() {
+        // Previous image
+        if (currentFile == fileInfoList.begin())currentFile = fileInfoList.end();
+        --currentFile;
+        emit currentImageChange();
+    });
+
+    auto *imageTop = new QShortcut(QKeySequence(Qt::Key_Up), this);
+    connect(imageTop, &QShortcut::activated, this, [&]() {
+        // First image
+        currentFile = fileInfoList.begin();
+        emit currentImageChange();
+    });
+
+    auto *imageBottom = new QShortcut(QKeySequence(Qt::Key_Down), this);
+    connect(imageBottom, &QShortcut::activated, this, [&]() {
+        // Last image
+        currentFile = fileInfoList.end() - 1;
+        emit currentImageChange();
+    });
+
+
+    auto *catePrevious = new QShortcut(QKeySequence(Qt::Key_K), this);
+    connect(catePrevious, &QShortcut::activated, this, [&]() {
+        --currentCate;
+        if (currentCate == -1)currentCate = categories.size() - 1;
+        emit currentCateChange();
+        updateCategory();
+        updateLabelColor();
+    });
+
+    auto *cateNext = new QShortcut(QKeySequence(Qt::Key_J), this);
+    connect(cateNext, &QShortcut::activated, this, [&]() {
+        ++currentCate;
+        if (currentCate == categories.size())currentCate = 0;
+        emit currentCateChange();
+        updateCategory();
+        updateLabelColor();
+    });
+
+    auto *cateTop = new QShortcut(QKeySequence(Qt::SHIFT|Qt::Key_K), this);
+    connect(cateTop, &QShortcut::activated, this, [&]() {
+        currentCate = 0;
+        emit currentCateChange();
+        updateCategory();
+        updateLabelColor();
+    });
+
+    auto *cateBottom = new QShortcut(QKeySequence(Qt::SHIFT|Qt::Key_J), this);
+    connect(cateBottom, &QShortcut::activated, this, [&]() {
+        currentCate = categories.size() - 1;
+        emit currentCateChange();
+        updateCategory();
+        updateLabelColor();
+    });
+
+    auto *cateNew = new QShortcut(QKeySequence(Qt::Key_N), this);
+    connect(cateNew, &QShortcut::activated, this, [&]() {
+        createNewCate();
+        updateCategory();
+        updateLabelColor();
+    });
+
+    auto *windowClose = new QShortcut(QKeySequence(Qt::Key_Q), this);
+    connect(windowClose, &QShortcut::activated, this, [&]() {
+        this->close();
+    });
+
+    auto *windowToggleFullscreen = new QShortcut(QKeySequence(Qt::Key_F), this);
+    connect(windowToggleFullscreen, &QShortcut::activated, this, [&]() {
+        // Toggle Fullscreen
+        if (isFullScreen()) {
+            showNormal();
+        } else {
+            showFullScreen();
+        }
+    });
+
+    connect(this, &MainWindow::currentImageChange, this, &MainWindow::updateInfo);
 }
 
 void MainWindow::paintEvent(QPaintEvent *event) {
@@ -69,81 +154,6 @@ QPixmap MainWindow::loadPixmap(const QString &filename) {
     QSize scaledSize = imageSize.scaled(this->width(), this->height(), Qt::KeepAspectRatio);
     reader.setScaledSize(scaledSize);
     return QPixmap::fromImageReader(&reader);
-}
-
-void MainWindow::keyPressEvent(QKeyEvent *event) {
-    if (processToggleImage(event->key())) {
-        emit currentImageChange();
-        update();
-    } else if (processToggleCate(event->keyCombination())) {
-        emit currentCateChange();
-        updateCategory();
-        updateLabelColor();
-    } else if (!processToggleWindow(event->key())) {
-        event->ignore();
-        return;
-    }
-
-    event->accept();
-}
-
-bool MainWindow::processToggleImage(int key) {
-    switch (key) {
-        case Qt::Key_Right:
-            // Next image
-            ++currentFile;
-            if (currentFile == fileInfoList.end())currentFile = fileInfoList.begin();
-            break;
-        case Qt::Key_Left:
-            // Present image
-            if (currentFile == fileInfoList.begin())currentFile = fileInfoList.end();
-            --currentFile;
-            break;
-        case Qt::Key_Up:
-            // First image
-            currentFile = fileInfoList.begin();
-            break;
-        case Qt::Key_Down:
-            // Last image
-            currentFile = fileInfoList.end() - 1;
-            break;
-        default:
-            return false;
-    }
-    return true;
-}
-
-bool MainWindow::processToggleWindow(int key) {
-    switch (key) {
-        case Qt::Key_Q:
-            // Quit
-            this->close();
-            break;
-        case Qt::Key_F:
-            // Toggle Fullscreen
-            if (isFullScreen()) {
-                showNormal();
-            } else {
-                showFullScreen();
-            }
-            break;
-        default:
-            return false;
-    }
-    return true;
-}
-
-bool MainWindow::processToggleCate(QKeyCombination key) {
-    if (key.key() == Qt::Key_N) {
-        createNewCate();
-    } else if (key.key() == Qt::Key_K) {
-        --currentCate;
-        if (currentCate == -1)currentCate = categories.size() - 1;
-    } else if (key.key() == Qt::Key_J) {
-        ++currentCate;
-        if (currentCate == categories.size())currentCate = 0;
-    } else return false;
-    return true;
 }
 
 void MainWindow::setSuitableScreenSize() {
@@ -163,7 +173,9 @@ void MainWindow::setSuitableScreenSize() {
 
 void MainWindow::updateInfo() {
     statusLabel->setText(currentFile->fileName());
+    updateLabelColor();
     setLabelColor();
+    update();
 }
 
 void MainWindow::updateCategory() {
