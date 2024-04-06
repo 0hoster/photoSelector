@@ -19,7 +19,7 @@ Welcome::~Welcome() {
 void Welcome::initUI() {
     auto *mainFormLayout = new QFormLayout(this);
 
-    imageLabel->setPixmap(QPixmap(":/images/image.png"));
+    imageLabel->setPixmap(QPixmap(":/fileInfoList/image.png"));
     imageLabel->setAlignment(Qt::AlignCenter);
     imageLabel->setMargin(30);
     mainFormLayout->addWidget(imageLabel);
