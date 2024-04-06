@@ -53,7 +53,7 @@ private:
 
     void initUI();
 
-    void initSlots();
+    void initSlots() const;
 
     void setSuitableScreenSize();
 
@@ -71,7 +71,7 @@ private:
 
     bool processToggleWindow(int key);
 
-    bool processToggleCate(int key);
+    bool processToggleCate(QKeyCombination key);
 
     QPixmap loadPixmap(const QString &filename);
 

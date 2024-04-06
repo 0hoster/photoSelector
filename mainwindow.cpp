@@ -28,7 +28,6 @@ MainWindow::MainWindow(QWidget *parent, const QString &rootPath)
     setLabelColor();
     updateLabelColor();
 
-    connect(this, &MainWindow::currentImageChange, this, &MainWindow::updateInfo);
 }
 
 MainWindow::~MainWindow() {
@@ -51,7 +50,8 @@ void MainWindow::initUI() {
     this->setCentralWidget(mainWidget);
 }
 
-void MainWindow::initSlots() {
+void MainWindow::initSlots() const {
+    connect(this, &MainWindow::currentImageChange, this, &MainWindow::updateInfo);
 
 }
 
@@ -75,14 +75,16 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
     if (processToggleImage(event->key())) {
         emit currentImageChange();
         update();
-        event->accept();
-    } else if (processToggleCate(event->key())) {
+    } else if (processToggleCate(event->keyCombination())) {
         emit currentCateChange();
         updateCategory();
         updateLabelColor();
-    } else {
-        processToggleWindow(event->key());
+    } else if (!processToggleWindow(event->key())) {
+        event->ignore();
+        return;
     }
+
+    event->accept();
 }
 
 bool MainWindow::processToggleImage(int key) {
@@ -131,23 +133,16 @@ bool MainWindow::processToggleWindow(int key) {
     return true;
 }
 
-bool MainWindow::processToggleCate(int key) {
-    switch (key) {
-        case Qt::Key_N:
-            // Add category
-            createNewCate();
-            break;
-        case Qt::Key_K:
-            --currentCate;
-            if (currentCate == -1)currentCate = categories.size() - 1;
-            break;
-        case Qt::Key_J:
-            ++currentCate;
-            if (currentCate == categories.size())currentCate = 0;
-            break;
-        default:
-            return false;
-    }
+bool MainWindow::processToggleCate(QKeyCombination key) {
+    if (key.key() == Qt::Key_N) {
+        createNewCate();
+    } else if (key.key() == Qt::Key_K) {
+        --currentCate;
+        if (currentCate == -1)currentCate = categories.size() - 1;
+    } else if (key.key() == Qt::Key_J) {
+        ++currentCate;
+        if (currentCate == categories.size())currentCate = 0;
+    } else return false;
     return true;
 }
 
