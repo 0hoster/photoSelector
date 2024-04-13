@@ -25,6 +25,7 @@
 #include <QImage>
 #include <QInputDialog>
 #include <QShortcut>
+#include <cstring>
 
 class MainWindow : public QMainWindow {
 Q_OBJECT
@@ -39,6 +40,8 @@ private:
     QDir root;
     QFileInfoList fileInfoList;
     QFileInfoList::iterator currentFile;
+    // Font
+    QFont labelFont;
     // UI
     QColor labelColor;
     QColor currentColor = Qt::red;
@@ -47,18 +50,32 @@ private:
     QFormLayout *mainLayout;
     QFormLayout *categoryLayout;
     // Category
+    const static int keyMax = 16;
+    char frontKeys[keyMax + 1] = " hjkl";
+    char backKeys[keyMax + 1] = "asdf";
     QList<Cate> categories;
-    long long currentCate = 20;
+    int categoryEnd=0;
+    int categoryMax = 50;
+    long long currentCatePage = 2;
     const static int LABEL_HEIGHT = 30;
-    const int categoryMax = 50;
+
+    void initValues(const QString &rootPath);
 
     void initUI();
+
+    void initFont();
 
     void initSlots();
 
     void setSuitableScreenSize();
 
     void updateInfo();
+
+    void updateCateShortcut();
+
+    void setCategoryLabelAt(int index,const QString &label);
+
+    void setCategoryAt(int index, const QString &content, const QString &label = nullptr);
 
     void updateCategory();
 
@@ -82,7 +99,7 @@ signals:
 
     void currentImageChange();
 
-    void currentCateChange();
+    void categoryEndChange();
 };
 
 #endif // MAINWINDOW_H

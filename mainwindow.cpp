@@ -7,10 +7,30 @@ MainWindow::MainWindow(QWidget *parent, const QString &rootPath)
     mainLayout = new QFormLayout;
     categoryLayout = new QFormLayout;
     labelColor = QColor(Qt::black);
+
     for (int i = 0; i < 100; ++i) {
         categories.push_back(Cate{QString::asprintf("%2d", i), 0, false});
     }
+    // Test data
 
+    setWindowTitle("Photos Selector - " + rootPath);
+    initValues(rootPath);
+    initFont();
+    initUI();
+    initSlots();
+    setSuitableScreenSize();
+    updateCateShortcut();
+    updateCategory();
+//    setLabelColor();
+//    updateLabelColor();
+}
+
+MainWindow::~MainWindow() {
+    delete mainWidget->layout();
+    delete mainWidget;
+}
+
+void MainWindow::initValues(const QString &rootPath) {
     root.setPath(rootPath);
     for (const auto &file: root.entryInfoList()) {
         QString fileName = file.fileName().toLower();
@@ -20,25 +40,26 @@ MainWindow::MainWindow(QWidget *parent, const QString &rootPath)
         }
     }
     currentFile = fileInfoList.begin();
-    setWindowTitle("Photos Selector - " + rootPath);
-    initUI();
-    initSlots();
-    setSuitableScreenSize();
-    updateCategory();
-    setLabelColor();
-    updateLabelColor();
-}
 
-MainWindow::~MainWindow() {
-    delete mainWidget->layout();
-    delete mainWidget;
+    assert(strlen(frontKeys) <= keyMax && strlen(backKeys) <= keyMax);
+
+    categoryMax = (int) std::strlen(frontKeys) * std::strlen(backKeys);
+
+    categoryEnd = (int) categories.size() / categoryMax;
+    if (categories.size() % categoryMax == 0) {
+        categoryEnd = qMax(categoryEnd - 1, 0);
+    }
 }
 
 void MainWindow::initUI() {
-
+    categoryLayout->setVerticalSpacing(5);
+    categoryLayout->setHorizontalSpacing(5);
     for (int i = 0; i < categoryMax; ++i) {
+        auto *itemLabel = new QLabel();
         auto *item = new QLabel();
-        categoryLayout->addWidget(item);
+        itemLabel->setFont(labelFont);
+        item->setFont(labelFont);
+        categoryLayout->addRow(itemLabel, item);
     }
     statusLabel->setText(currentFile->fileName());
 
@@ -47,6 +68,10 @@ void MainWindow::initUI() {
 
     mainWidget->setLayout(mainLayout);
     this->setCentralWidget(mainWidget);
+}
+
+void MainWindow::initFont() {
+    labelFont = QFont("JetBrains Mono");
 }
 
 void MainWindow::initSlots() {
@@ -65,7 +90,6 @@ void MainWindow::initSlots() {
         --currentFile;
         emit currentImageChange();
     });
-
     auto *imageTop = new QShortcut(QKeySequence(Qt::Key_Up), this);
     connect(imageTop, &QShortcut::activated, this, [&]() {
         // First image
@@ -81,38 +105,30 @@ void MainWindow::initSlots() {
     });
 
 
-    auto *catePrevious = new QShortcut(QKeySequence(Qt::Key_K), this);
-    connect(catePrevious, &QShortcut::activated, this, [&]() {
-        --currentCate;
-        if (currentCate == -1)currentCate = categories.size() - 1;
-        emit currentCateChange();
+    auto *catePreviousPage = new QShortcut(QKeySequence(Qt::Key_K), this);
+    connect(catePreviousPage, &QShortcut::activated, this, [&]() {
+        --currentCatePage;
+        if (currentCatePage <= -1)currentCatePage = categoryEnd;
         updateCategory();
-        updateLabelColor();
     });
 
-    auto *cateNext = new QShortcut(QKeySequence(Qt::Key_J), this);
-    connect(cateNext, &QShortcut::activated, this, [&]() {
-        ++currentCate;
-        if (currentCate == categories.size())currentCate = 0;
-        emit currentCateChange();
+    auto *cateNextPage = new QShortcut(QKeySequence(Qt::Key_J), this);
+    connect(cateNextPage, &QShortcut::activated, this, [&]() {
+        ++currentCatePage;
+        if (currentCatePage > categoryEnd)currentCatePage = 0;
         updateCategory();
-        updateLabelColor();
     });
 
-    auto *cateTop = new QShortcut(QKeySequence(Qt::SHIFT|Qt::Key_K), this);
-    connect(cateTop, &QShortcut::activated, this, [&]() {
-        currentCate = 0;
-        emit currentCateChange();
+    auto *cateTopPage = new QShortcut(QKeySequence(Qt::Key_K | Qt::SHIFT), this);
+    connect(cateTopPage, &QShortcut::activated, this, [&]() {
+        currentCatePage = 0;
         updateCategory();
-        updateLabelColor();
     });
 
-    auto *cateBottom = new QShortcut(QKeySequence(Qt::SHIFT|Qt::Key_J), this);
-    connect(cateBottom, &QShortcut::activated, this, [&]() {
-        currentCate = categories.size() - 1;
-        emit currentCateChange();
+    auto *cateBottomPage = new QShortcut(QKeySequence(Qt::Key_J | Qt::SHIFT), this);
+    connect(cateBottomPage, &QShortcut::activated, this, [&]() {
+        currentCatePage = categoryEnd;
         updateCategory();
-        updateLabelColor();
     });
 
     auto *cateNew = new QShortcut(QKeySequence(Qt::Key_N), this);
@@ -178,35 +194,43 @@ void MainWindow::updateInfo() {
     update();
 }
 
-void MainWindow::updateCategory() {
-    int itemIndex = 0;
+void MainWindow::updateCateShortcut() {
+    int index = 0;
+    for (int i = 0; i < strlen(frontKeys); ++i) {
+        for (int j = 0; j < strlen(backKeys); ++j) {
+            setCategoryLabelAt(index, QString::asprintf("%c%c", frontKeys[i], backKeys[j]));
+            ++index;
+        }
+    }
+}
 
-    // Display atLeast
-    for (auto i = qMax(currentCate - 4, 0); i < currentCate; ++i) {
-        auto *item = qobject_cast<QLabel *>(categoryLayout->itemAt(itemIndex++)->widget());
-        assert(item != nullptr);
-        item->setProperty("current", false);
-        item->setText(categories[i].content);
+void MainWindow::updateCategory() {
+    long long total = qMin(categoryMax, categories.size() - currentCatePage * categoryMax - 1);
+    assert(total > 0);
+    int itemIndex = (int) categoryMax * currentCatePage;
+
+    for (int i = 0; i < total; ++i) {
+        setCategoryAt(i, categories[i + itemIndex].content);
     }
-    // Display current
-    auto *current = qobject_cast<QLabel *>(categoryLayout->itemAt(itemIndex++)->widget());
-    assert(current != nullptr);
-    current->setProperty("current", true);
-    current->setText(categories[currentCate].content);
-    // Display next
-    for (auto i = currentCate + 1; itemIndex < categoryMax && i < categories.size(); ++i) {
-        auto *item = qobject_cast<QLabel *>(categoryLayout->itemAt(itemIndex++)->widget());
-        assert(item != nullptr);
-        item->setProperty("current", false);
-        item->setText(categories[i].content);
+    for (int i = (int) total; i < categoryMax; ++i) {
+        setCategoryAt(i, "");
     }
-    // Cleaning
-    while (itemIndex < categoryMax) {
-        auto *item = qobject_cast<QLabel *>(categoryLayout->itemAt(itemIndex++)->widget());
-        assert(item != nullptr);
-        item->setProperty("current", false);
-        item->setText("");
+}
+
+void MainWindow::setCategoryAt(int index, const QString &content, const QString &label) {
+    // Cate at 0 -> label[0*2], contentItem[0*2+1]
+    auto *contentItem = qobject_cast<QLabel *>(categoryLayout->itemAt(index * 2 + 1)->widget());
+    assert(contentItem != nullptr);
+    contentItem->setText(content);
+    if (label != nullptr) {
+        setCategoryLabelAt(index, label);
     }
+}
+
+void MainWindow::setCategoryLabelAt(int index, const QString &label) {
+    auto *labelItem = qobject_cast<QLabel *>(categoryLayout->itemAt(index * 2)->widget());
+    assert(labelItem != nullptr);
+    labelItem->setText(label);
 }
 
 void MainWindow::setLabelColor() {
