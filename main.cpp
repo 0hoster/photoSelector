@@ -8,7 +8,7 @@ int main(int argc, char *argv[]) {
     QApplication a(argc, argv);
 
     // for test
-    MainWindow m(nullptr, "/home/host/Pictures/Photos/A");
+    MainWindow m(nullptr, "/home/host/Pictures/Photos");
     m.show();
     return QApplication::exec();
     Welcome welcomeDialog;

@@ -31,6 +31,25 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::initValues(const QString &rootPath) {
+    toKeys['a'] = Qt::Key_A, toKeys['b'] = Qt::Key_B;
+    toKeys['c'] = Qt::Key_C, toKeys['d'] = Qt::Key_D;
+    toKeys['e'] = Qt::Key_E, toKeys['f'] = Qt::Key_F;
+    toKeys['g'] = Qt::Key_G, toKeys['h'] = Qt::Key_H;
+    toKeys['i'] = Qt::Key_I, toKeys['j'] = Qt::Key_J;
+    toKeys['k'] = Qt::Key_K, toKeys['l'] = Qt::Key_L;
+    toKeys['m'] = Qt::Key_M, toKeys['n'] = Qt::Key_N;
+    toKeys['o'] = Qt::Key_O, toKeys['p'] = Qt::Key_P;
+    toKeys['q'] = Qt::Key_Q, toKeys['r'] = Qt::Key_R;
+    toKeys['s'] = Qt::Key_S, toKeys['t'] = Qt::Key_T;
+    toKeys['u'] = Qt::Key_U, toKeys['v'] = Qt::Key_V;
+    toKeys['w'] = Qt::Key_W, toKeys['x'] = Qt::Key_X;
+    toKeys['y'] = Qt::Key_Y, toKeys['z'] = Qt::Key_Z;
+    toKeys['1'] = Qt::Key_1, toKeys['2'] = Qt::Key_2;
+    toKeys['3'] = Qt::Key_3, toKeys['4'] = Qt::Key_4;
+    toKeys['5'] = Qt::Key_5, toKeys['6'] = Qt::Key_6;
+    toKeys['7'] = Qt::Key_7, toKeys['8'] = Qt::Key_8;
+    toKeys['9'] = Qt::Key_9, toKeys['0'] = Qt::Key_0;
+
     root.setPath(rootPath);
     for (const auto &file: root.entryInfoList()) {
         QString fileName = file.fileName().toLower();
@@ -41,19 +60,21 @@ void MainWindow::initValues(const QString &rootPath) {
     }
     currentFile = fileInfoList.begin();
 
-    assert(strlen(frontKeys) <= keyMax && strlen(backKeys) <= keyMax);
+    assert(frontKeys.size() <= keyMax && strlen(backKeys) <= keyMax);
 
-    categoryMax = (int) std::strlen(frontKeys) * std::strlen(backKeys);
+    categoryMax = int(frontKeys.size()) * std::strlen(backKeys);
+    // 不可避免
 
     categoryEnd = (int) categories.size() / categoryMax;
-    if (categories.size() % categoryMax == 0) {
-        categoryEnd = qMax(categoryEnd - 1, 0);
+    if (categories.size() % categoryMax != 0) {
+        ++categoryEnd;
     }
 }
 
 void MainWindow::initUI() {
     categoryLayout->setVerticalSpacing(5);
     categoryLayout->setHorizontalSpacing(5);
+
     for (int i = 0; i < categoryMax; ++i) {
         auto *itemLabel = new QLabel();
         auto *item = new QLabel();
@@ -74,18 +95,25 @@ void MainWindow::initFont() {
     labelFont = QFont("JetBrains Mono");
 }
 
+void MainWindow::keySelect(int x, int y) {
+    int index = itemIndex() + x * (int) strlen(backKeys) + y;
+    if (index >= categories.size())return;
+    qDebug() << categories[index].content;
+}
+
 void MainWindow::initSlots() {
     auto *imageNext = new QShortcut(QKeySequence(Qt::Key_Right), this);
-    connect(imageNext, &QShortcut::activated, this, [&]() {
-        // Next image
+    auto *imageNextB = new QShortcut(QKeySequence(Qt::SHIFT | Qt::Key_N), this);
+    auto doImageNext = [&]() {
         ++currentFile;
         if (currentFile == fileInfoList.end())currentFile = fileInfoList.begin();
         emit currentImageChange();
-    });
+    };
+    connect(imageNext, &QShortcut::activated, this, doImageNext);
+    connect(imageNextB, &QShortcut::activated, this, doImageNext);
 
     auto *imagePrevious = new QShortcut(QKeySequence(Qt::Key_Left), this);
     connect(imagePrevious, &QShortcut::activated, this, [&]() {
-        // Previous image
         if (currentFile == fileInfoList.begin())currentFile = fileInfoList.end();
         --currentFile;
         emit currentImageChange();
@@ -108,14 +136,14 @@ void MainWindow::initSlots() {
     auto *catePreviousPage = new QShortcut(QKeySequence(Qt::Key_K), this);
     connect(catePreviousPage, &QShortcut::activated, this, [&]() {
         --currentCatePage;
-        if (currentCatePage <= -1)currentCatePage = categoryEnd;
+        if (currentCatePage <= -1)currentCatePage = categoryEnd - 1;
         updateCategory();
     });
 
     auto *cateNextPage = new QShortcut(QKeySequence(Qt::Key_J), this);
     connect(cateNextPage, &QShortcut::activated, this, [&]() {
         ++currentCatePage;
-        if (currentCatePage > categoryEnd)currentCatePage = 0;
+        if (currentCatePage >= categoryEnd)currentCatePage = 0;
         updateCategory();
     });
 
@@ -127,7 +155,7 @@ void MainWindow::initSlots() {
 
     auto *cateBottomPage = new QShortcut(QKeySequence(Qt::Key_J | Qt::SHIFT), this);
     connect(cateBottomPage, &QShortcut::activated, this, [&]() {
-        currentCatePage = categoryEnd;
+        currentCatePage = categoryEnd - 1;
         updateCategory();
     });
 
@@ -138,19 +166,21 @@ void MainWindow::initSlots() {
         updateLabelColor();
     });
 
+    for (int i = 0; i < frontKeys.size(); ++i) {
+        for (int j = 0; j < strlen(backKeys); ++j) {
+            QShortcut *select;
+            if (frontKeys[i] == Qt::MODIFIER_MASK) {
+                select = new QShortcut(QKeySequence(toKeys[backKeys[j]]), this);
+            } else {
+                select = new QShortcut(QKeySequence(frontKeys[i] | toKeys[backKeys[j]]), this);
+            }
+            connect(select, &QShortcut::activated, this, [i, j, this]() { keySelect(i, j); });
+        }
+    }
+
     auto *windowClose = new QShortcut(QKeySequence(Qt::Key_Q), this);
     connect(windowClose, &QShortcut::activated, this, [&]() {
         this->close();
-    });
-
-    auto *windowToggleFullscreen = new QShortcut(QKeySequence(Qt::Key_F), this);
-    connect(windowToggleFullscreen, &QShortcut::activated, this, [&]() {
-        // Toggle Fullscreen
-        if (isFullScreen()) {
-            showNormal();
-        } else {
-            showFullScreen();
-        }
     });
 
     connect(this, &MainWindow::currentImageChange, this, &MainWindow::updateInfo);
@@ -196,9 +226,26 @@ void MainWindow::updateInfo() {
 
 void MainWindow::updateCateShortcut() {
     int index = 0;
-    for (int i = 0; i < strlen(frontKeys); ++i) {
+    for (auto &frontKey: frontKeys) {
         for (int j = 0; j < strlen(backKeys); ++j) {
-            setCategoryLabelAt(index, QString::asprintf("%c%c", frontKeys[i], backKeys[j]));
+            QString cut;
+            switch (frontKey) {
+                case Qt::CTRL:
+                    cut.push_back("C-");
+                    break;
+                case Qt::SHIFT:
+                    cut.push_back("S-");
+                    break;
+                case Qt::ALT:
+                    cut.push_back("A-");
+                    break;
+                case Qt::META:
+                    cut.push_back("M-");
+                    break;
+                case Qt::MODIFIER_MASK:
+                    break;
+            }
+            setCategoryLabelAt(index, cut + backKeys[j]);
             ++index;
         }
     }
@@ -207,10 +254,9 @@ void MainWindow::updateCateShortcut() {
 void MainWindow::updateCategory() {
     long long total = qMin(categoryMax, categories.size() - currentCatePage * categoryMax - 1);
     assert(total > 0);
-    int itemIndex = (int) categoryMax * currentCatePage;
 
     for (int i = 0; i < total; ++i) {
-        setCategoryAt(i, categories[i + itemIndex].content);
+        setCategoryAt(i, categories[i + itemIndex()].content);
     }
     for (int i = (int) total; i < categoryMax; ++i) {
         setCategoryAt(i, "");

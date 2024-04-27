@@ -51,13 +51,18 @@ private:
     QFormLayout *categoryLayout;
     // Category
     const static int keyMax = 16;
-    char frontKeys[keyMax + 1] = " hjkl";
+    QList<Qt::Modifier> frontKeys = {Qt::CTRL, Qt::SHIFT, Qt::ALT,Qt::MODIFIER_MASK};
     char backKeys[keyMax + 1] = "asdf";
     QList<Cate> categories;
-    int categoryEnd=0;
+    int categoryEnd = 0;
     int categoryMax = 50;
-    long long currentCatePage = 2;
+    int currentCatePage = 2;
     const static int LABEL_HEIGHT = 30;
+    // Maps
+    [[nodiscard]] int itemIndex() const{return categoryMax * currentCatePage;}
+    QHash<char, Qt::Key> toKeys;
+
+    void keySelect(int x, int y);
 
     void initValues(const QString &rootPath);
 
@@ -73,7 +78,7 @@ private:
 
     void updateCateShortcut();
 
-    void setCategoryLabelAt(int index,const QString &label);
+    void setCategoryLabelAt(int index, const QString &label);
 
     void setCategoryAt(int index, const QString &content, const QString &label = nullptr);
 
