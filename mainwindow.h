@@ -26,6 +26,7 @@
 #include <QInputDialog>
 #include <QShortcut>
 #include <cstring>
+#include <QMessageBox>
 
 class MainWindow : public QMainWindow {
 Q_OBJECT
@@ -82,10 +83,6 @@ private:
     void setCategoryAt(int index, const QString &content, const QString &label = nullptr);
 
     void updateCategory();
-
-    void setLabelColor();
-
-    void updateLabelColor();
 
     QPixmap loadPixmap(const QString &filename);
 

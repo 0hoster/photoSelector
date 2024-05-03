@@ -17,8 +17,6 @@ MainWindow::MainWindow(QWidget *parent, const QStringList &imageNames)
     setSuitableScreenSize();
     updateCateShortcutDisplay();
     updateCategory();
-//    setLabelColor();
-//    updateLabelColor();
 }
 
 MainWindow::~MainWindow() {
@@ -83,8 +81,8 @@ void MainWindow::keySelect(int x, int y) {
 
 void MainWindow::initSlots() {
     auto *imageNext = new QShortcut(QKeySequence(Qt::Key_Right), this);
-    auto *imageNextB = new QShortcut(QKeySequence(Qt::SHIFT | Qt::Key_N), this);
-    auto doImageNext = [&]() {
+    auto *imageNextB = new QShortcut(QKeySequence(Qt::Key_Return), this);
+    auto doImageNext =[this]() {
         ++currentFile;
         if (currentFile == fileInfoList.end())currentFile = fileInfoList.begin();
         emit currentImageChange();
@@ -93,20 +91,20 @@ void MainWindow::initSlots() {
     connect(imageNextB, &QShortcut::activated, this, doImageNext);
 
     auto *imagePrevious = new QShortcut(QKeySequence(Qt::Key_Left), this);
-    connect(imagePrevious, &QShortcut::activated, this, [&]() {
+    connect(imagePrevious, &QShortcut::activated, this,[this]() {
         if (currentFile == fileInfoList.begin())currentFile = fileInfoList.end();
         --currentFile;
         emit currentImageChange();
     });
     auto *imageTop = new QShortcut(QKeySequence(Qt::Key_Up), this);
-    connect(imageTop, &QShortcut::activated, this, [&]() {
+    connect(imageTop, &QShortcut::activated, this,[this]() {
         // First image
         currentFile = fileInfoList.begin();
         emit currentImageChange();
     });
 
     auto *imageBottom = new QShortcut(QKeySequence(Qt::Key_Down), this);
-    connect(imageBottom, &QShortcut::activated, this, [&]() {
+    connect(imageBottom, &QShortcut::activated, this,[this]() {
         // Last image
         currentFile = fileInfoList.end() - 1;
         emit currentImageChange();
@@ -114,36 +112,35 @@ void MainWindow::initSlots() {
 
 
     auto *catePreviousPage = new QShortcut(QKeySequence(Qt::Key_K), this);
-    connect(catePreviousPage, &QShortcut::activated, this, [&]() {
+    connect(catePreviousPage, &QShortcut::activated, this,[this]() {
         --currentCatePage;
         if (currentCatePage <= -1)currentCatePage = categoryEnd - 1;
         updateCategory();
     });
 
     auto *cateNextPage = new QShortcut(QKeySequence(Qt::Key_J), this);
-    connect(cateNextPage, &QShortcut::activated, this, [&]() {
+    connect(cateNextPage, &QShortcut::activated, this,[this]() {
         ++currentCatePage;
         if (currentCatePage >= categoryEnd)currentCatePage = 0;
         updateCategory();
     });
 
     auto *cateTopPage = new QShortcut(QKeySequence(Qt::Key_K | Qt::SHIFT), this);
-    connect(cateTopPage, &QShortcut::activated, this, [&]() {
+    connect(cateTopPage, &QShortcut::activated, this,[this]() {
         currentCatePage = 0;
         updateCategory();
     });
 
     auto *cateBottomPage = new QShortcut(QKeySequence(Qt::Key_J | Qt::SHIFT), this);
-    connect(cateBottomPage, &QShortcut::activated, this, [&]() {
+    connect(cateBottomPage, &QShortcut::activated, this,[this]() {
         currentCatePage = categoryEnd - 1;
         updateCategory();
     });
 
     auto *cateNew = new QShortcut(QKeySequence(Qt::Key_N), this);
-    connect(cateNew, &QShortcut::activated, this, [&]() {
+    connect(cateNew, &QShortcut::activated, this,[this]() {
         createNewCate();
         updateCategory();
-        updateLabelColor();
     });
 
     for (int i = 0; i < frontKeys.size(); ++i) {
@@ -159,7 +156,7 @@ void MainWindow::initSlots() {
     }
 
     auto *windowClose = new QShortcut(QKeySequence(Qt::Key_Q), this);
-    connect(windowClose, &QShortcut::activated, this, [&]() {
+    connect(windowClose, &QShortcut::activated, this,[this]() {
         this->close();
     });
 
@@ -199,15 +196,21 @@ void MainWindow::setSuitableScreenSize() {
 
 void MainWindow::updateInfo() {
     statusLabel->setText(currentFile->fileName());
-    updateLabelColor();
-    setLabelColor();
     update();
 }
 
 void MainWindow::updateCateShortcutDisplay() {
+    long long total = qMin(categoryPerPage, categories.size() - currentCatePage * categoryPerPage);
+    assert(total >= 0);
+    qDebug()<<"total"<<total;
     int index = 0;
     for (auto &frontKey: frontKeys) {
         for (int j = 0; j < strlen(backKeys); ++j) {
+            if(index>=total){
+                setCategoryLabelAt(index,"");
+                ++index;
+                continue;
+            }
             QString cut;
             switch (frontKey) {
                 case Qt::CTRL:
@@ -232,7 +235,7 @@ void MainWindow::updateCateShortcutDisplay() {
 }
 
 void MainWindow::updateCategory() {
-    long long total = qMin(categoryPerPage, categories.size() - currentCatePage * categoryPerPage - 1);
+    long long total = qMin(categoryPerPage, categories.size() - currentCatePage * categoryPerPage);
     assert(total >= 0);
 
     for (int i = 0; i < total; ++i) {
@@ -241,6 +244,7 @@ void MainWindow::updateCategory() {
     for (int i = (int) total; i < categoryPerPage; ++i) {
         setCategoryAt(i, "");
     }
+    updateCateShortcutDisplay();
 }
 
 void MainWindow::setCategoryAt(int index, const QString &content, const QString &label) {
@@ -259,33 +263,27 @@ void MainWindow::setCategoryLabelAt(int index, const QString &label) {
     labelItem->setText(label);
 }
 
-void MainWindow::setLabelColor() {
-    QImage image = loadPixmap(currentFile->absoluteFilePath()).toImage();
-    int height = image.height() >> 1;
-    int width = image.width() >> 1;
-    long long all = 0;
-    int count = 0;
-    for (int i = 0; i < width && i < this->width(); i += qMax(width >> 4, 1)) {
-        for (int j = 0; j < height && j < this->height(); j += qMax(height >> 4, 1)) {
-            all += image.pixelColor(i, j).red();
-            all += image.pixelColor(i, j).green();
-            all += image.pixelColor(i, j).blue();
-            ++count;
-        }
-    }
-    all /= count * 3;
-    if (all > 150) {
-        labelColor = Qt::black;
-    } else {
-        labelColor = Qt::white;
-    }
-}
-
 void MainWindow::createNewCate() {
     bool ok = false;
     QString newCate = QInputDialog::getText(this, "New Category", "What 's the new category? 😝", \
-    QLineEdit::Normal, "", &ok, Qt::FramelessWindowHint);
+                                            QLineEdit::Normal, "", &ok,isFullScreen()? Qt::FramelessWindowHint:Qt::Dialog);
     if (ok) {
+        if(newCate.isEmpty()){
+            QMessageBox::about(this,"Hey man","You enter an EMPTY string, are you serious?");
+            return;
+        }
+        auto isRepeated = [this,newCate](){
+            for(const auto &i:categories){
+                if(i.content==newCate){
+                    return true;
+                }
+            }
+            return false;
+        };
+        if(newCate.isEmpty()||isRepeated()){
+            QMessageBox::about(this,"Notice here",QString("You enter the category `%1`, which is already in queue.").arg(newCate));
+            return;
+        }
         addCate(newCate,false);
         updateCategory();
     }
@@ -296,12 +294,5 @@ void MainWindow::addCate(const QString &newCate,bool isLock){
     while(categoryEnd*categoryPerPage<categories.size())++categoryEnd;
 }
 
-void MainWindow::updateLabelColor() {
-    QString selectAll = "QLabel {color:rgb(%1,%2,%3);}";
-    QString selectCur = "QLabel[current=true] {color:rgb(%1,%2,%3);}";
-    QString style = selectAll.arg(labelColor.red()).arg(labelColor.green()).arg(labelColor.blue()) + \
-                    selectCur.arg(currentColor.red()).arg(currentColor.green()).arg(currentColor.blue());
-    mainWidget->setStyleSheet(style);
-}
 
 
