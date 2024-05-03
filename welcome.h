@@ -16,13 +16,14 @@
 #include <QPalette>
 #include <QSet>
 #include <QCryptographicHash>
+#include <QMessageBox>
 
 class Welcome : public QDialog {
 Q_OBJECT
 
 private:
     QString rootFolder;
-    QStringList images;
+    QStringList imagesResult;
     QLabel *imageLabel;
     QLabel *welcomeLabel;
     QLabel *tipLabel;
@@ -34,7 +35,7 @@ private:
 
     void chooseRootFolder();
 
-    void repeatCheck(QDir files);
+    bool repeatCheck(QDir files);
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;

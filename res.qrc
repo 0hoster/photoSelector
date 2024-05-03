@@ -2,4 +2,9 @@
     <qresource prefix="/fileInfoList">
         <file>image.png</file>
     </qresource>
+    <qresource prefix="/font">
+        <file>LXGWWenKai-Bold.ttf</file>
+        <file>LXGWWenKai-Light.ttf</file>
+        <file>LXGWWenKai-Regular.ttf</file>
+    </qresource>
 </RCC>

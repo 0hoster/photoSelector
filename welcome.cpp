@@ -5,7 +5,7 @@ Welcome::Welcome(QWidget *parent) : QDialog(parent) {
     welcomeLabel = new QLabel();
     tipLabel = new QLabel();
     containedFile.clear();
-    images.clear();
+    imagesResult.clear();
     initUI();
     initSlots();
     setWindowTitle("Photos Selector");
@@ -81,28 +81,40 @@ void Welcome::chooseRootFolder() {
         tipLabel->setText(tip);
         return;
     }
-    repeatCheck(root);
-    this->accept();
+    if(repeatCheck(root))
+        this->accept();
 }
 
-void Welcome::repeatCheck(QDir files) {
+bool Welcome::repeatCheck(QDir files) {
     files.setSorting(QDir::Size);
-    images.clear();
+    imagesResult.clear();
     containedFile.clear();
-    for(auto fileInfo:files.entryInfoList()){
+    QStringList repeatedFile;
+    for(const auto &fileInfo:files.entryInfoList()){
         QString fileName = fileInfo.absoluteFilePath().toLower();
         if(!(fileName.endsWith(".png")||fileName.endsWith(".jpg")||fileName.endsWith(".jpeg")||fileName.endsWith(".bmp")))continue;
         QFile file(fileName);
         if(file.open(QFile::ReadOnly)){
             QByteArray byte = QCryptographicHash::hash(file.readAll(),QCryptographicHash::Md5);
             if(containedFile.contains(byte)){
-                qDebug()<<"Found repeated file :"<<fileName;
+                repeatedFile.push_back(fileName);
             }else{
-                images.push_back(fileName);
+                imagesResult.push_back(fileName);
                 containedFile.insert(byte);
             }
         }
     }
+    if(repeatedFile.size()){
+        QString notice = "Notice that these photos are totally copies of ones before.\n";
+        for(const auto &i:repeatedFile){
+            notice.push_back("- "+i+"\n");
+        }
+        auto result = QMessageBox::information(this,"Repeated files detected",notice,QMessageBox::Ok|QMessageBox::Cancel);
+        if(result==QMessageBox::Cancel){
+            return false;
+        }
+    }
+    return true;
 }
 
 void Welcome::mousePressEvent(QMouseEvent *event) {
@@ -116,5 +128,5 @@ void Welcome::mousePressEvent(QMouseEvent *event) {
 }
 
 QStringList Welcome::getRootDir() {
-    return images;
+    return imagesResult;
 }

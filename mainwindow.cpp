@@ -7,19 +7,15 @@ MainWindow::MainWindow(QWidget *parent, const QStringList &imageNames)
     mainLayout = new QFormLayout;
     categoryLayout = new QFormLayout;
     labelColor = QColor(Qt::black);
-
-    for (int i = 0; i < 100; ++i) {
-        categories.push_back(Cate{QString::asprintf("%2d", i), 0, false});
-    }
     // Test data
-    qDebug()<<imageNames.size();
+    assert(imageNames.size()>0);
+
     setWindowTitle("Photos Selector - " + imageNames[0]);
     initValues(imageNames);
-    initFont();
     initUI();
     initSlots();
     setSuitableScreenSize();
-    updateCateShortcut();
+    updateCateShortcutDisplay();
     updateCategory();
 //    setLabelColor();
 //    updateLabelColor();
@@ -57,24 +53,17 @@ void MainWindow::initValues(const QStringList &imageNames) {
 
     assert(frontKeys.size() <= keyMax && strlen(backKeys) <= keyMax);
 
-    categoryMax = int(frontKeys.size()) * std::strlen(backKeys);
+    categoryPerPage = int(frontKeys.size()) * std::strlen(backKeys);
     // 不可避免
-
-    categoryEnd = (int) categories.size() / categoryMax;
-    if (categories.size() % categoryMax != 0) {
-        ++categoryEnd;
-    }
 }
 
 void MainWindow::initUI() {
     categoryLayout->setVerticalSpacing(5);
     categoryLayout->setHorizontalSpacing(5);
 
-    for (int i = 0; i < categoryMax; ++i) {
+    for (int i = 0; i < categoryPerPage; ++i) {
         auto *itemLabel = new QLabel();
         auto *item = new QLabel();
-        itemLabel->setFont(labelFont);
-        item->setFont(labelFont);
         categoryLayout->addRow(itemLabel, item);
     }
     statusLabel->setText(currentFile->fileName());
@@ -84,10 +73,6 @@ void MainWindow::initUI() {
 
     mainWidget->setLayout(mainLayout);
     this->setCentralWidget(mainWidget);
-}
-
-void MainWindow::initFont() {
-    labelFont = QFont("JetBrains Mono");
 }
 
 void MainWindow::keySelect(int x, int y) {
@@ -219,7 +204,7 @@ void MainWindow::updateInfo() {
     update();
 }
 
-void MainWindow::updateCateShortcut() {
+void MainWindow::updateCateShortcutDisplay() {
     int index = 0;
     for (auto &frontKey: frontKeys) {
         for (int j = 0; j < strlen(backKeys); ++j) {
@@ -247,13 +232,13 @@ void MainWindow::updateCateShortcut() {
 }
 
 void MainWindow::updateCategory() {
-    long long total = qMin(categoryMax, categories.size() - currentCatePage * categoryMax - 1);
-    assert(total > 0);
+    long long total = qMin(categoryPerPage, categories.size() - currentCatePage * categoryPerPage - 1);
+    assert(total >= 0);
 
     for (int i = 0; i < total; ++i) {
         setCategoryAt(i, categories[i + itemIndex()].content);
     }
-    for (int i = (int) total; i < categoryMax; ++i) {
+    for (int i = (int) total; i < categoryPerPage; ++i) {
         setCategoryAt(i, "");
     }
 }
@@ -301,9 +286,14 @@ void MainWindow::createNewCate() {
     QString newCate = QInputDialog::getText(this, "New Category", "What 's the new category? 😝", \
     QLineEdit::Normal, "", &ok, Qt::FramelessWindowHint);
     if (ok) {
-        categories.push_back(Cate{newCate, 0, false});
+        addCate(newCate,false);
         updateCategory();
     }
+}
+
+void MainWindow::addCate(const QString &newCate,bool isLock){
+    categories.push_back(Cate{newCate,0,isLock});
+    while(categoryEnd*categoryPerPage<categories.size())++categoryEnd;
 }
 
 void MainWindow::updateLabelColor() {

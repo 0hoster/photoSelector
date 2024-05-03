@@ -39,8 +39,6 @@ private:
     // File System
     QFileInfoList fileInfoList;
     QFileInfoList::iterator currentFile;
-    // Font
-    QFont labelFont;
     // UI
     QColor labelColor;
     QColor currentColor = Qt::red;
@@ -49,16 +47,18 @@ private:
     QFormLayout *mainLayout;
     QFormLayout *categoryLayout;
     // Category
+    void createNewCate();
+    void addCate(const QString &newCate,bool isLook = false);
     const static int keyMax = 16;
     QList<Qt::Modifier> frontKeys = {Qt::CTRL, Qt::SHIFT, Qt::ALT,Qt::MODIFIER_MASK};
     char backKeys[keyMax + 1] = "asdf";
     QList<Cate> categories;
     int categoryEnd = 0;
-    int categoryMax = 50;
-    int currentCatePage = 2;
+    int currentCatePage = 0;
+    int categoryPerPage = 0;
     const static int LABEL_HEIGHT = 30;
     // Maps
-    [[nodiscard]] int itemIndex() const{return categoryMax * currentCatePage;}
+    [[nodiscard]] int itemIndex() const{return categoryPerPage * currentCatePage;}
     QHash<char, Qt::Key> toKeys;
 
     void keySelect(int x, int y);
@@ -75,7 +75,7 @@ private:
 
     void updateInfo();
 
-    void updateCateShortcut();
+    void updateCateShortcutDisplay();
 
     void setCategoryLabelAt(int index, const QString &label);
 
@@ -86,8 +86,6 @@ private:
     void setLabelColor();
 
     void updateLabelColor();
-
-    void createNewCate();
 
     QPixmap loadPixmap(const QString &filename);
 
