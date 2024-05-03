@@ -1,6 +1,6 @@
 #include "mainwindow.h"
 
-MainWindow::MainWindow(QWidget *parent, const QString &rootPath)
+MainWindow::MainWindow(QWidget *parent, const QStringList &imageNames)
         : QMainWindow(parent) {
     statusLabel = new QLabel;
     mainWidget = new QWidget;
@@ -12,9 +12,9 @@ MainWindow::MainWindow(QWidget *parent, const QString &rootPath)
         categories.push_back(Cate{QString::asprintf("%2d", i), 0, false});
     }
     // Test data
-
-    setWindowTitle("Photos Selector - " + rootPath);
-    initValues(rootPath);
+    qDebug()<<imageNames.size();
+    setWindowTitle("Photos Selector - " + imageNames[0]);
+    initValues(imageNames);
     initFont();
     initUI();
     initSlots();
@@ -30,7 +30,7 @@ MainWindow::~MainWindow() {
     delete mainWidget;
 }
 
-void MainWindow::initValues(const QString &rootPath) {
+void MainWindow::initValues(const QStringList &imageNames) {
     toKeys['a'] = Qt::Key_A, toKeys['b'] = Qt::Key_B;
     toKeys['c'] = Qt::Key_C, toKeys['d'] = Qt::Key_D;
     toKeys['e'] = Qt::Key_E, toKeys['f'] = Qt::Key_F;
@@ -50,13 +50,8 @@ void MainWindow::initValues(const QString &rootPath) {
     toKeys['7'] = Qt::Key_7, toKeys['8'] = Qt::Key_8;
     toKeys['9'] = Qt::Key_9, toKeys['0'] = Qt::Key_0;
 
-    root.setPath(rootPath);
-    for (const auto &file: root.entryInfoList()) {
-        QString fileName = file.fileName().toLower();
-        if (fileName.endsWith(".png") || fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") ||
-            fileName.endsWith(".bmp")) {
-            fileInfoList.push_back(file);
-        }
+    for(const auto& i:imageNames){
+        fileInfoList.push_back(QFileInfo(i));
     }
     currentFile = fileInfoList.begin();
 

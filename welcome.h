@@ -14,21 +14,27 @@
 #include <QDir>
 #include <QFont>
 #include <QPalette>
+#include <QSet>
+#include <QCryptographicHash>
 
 class Welcome : public QDialog {
 Q_OBJECT
 
 private:
     QString rootFolder;
+    QStringList images;
     QLabel *imageLabel;
     QLabel *welcomeLabel;
     QLabel *tipLabel;
+    QSet<QByteArray> containedFile;
 
     void initUI();
 
     void initSlots();
 
     void chooseRootFolder();
+
+    void repeatCheck(QDir files);
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -37,7 +43,7 @@ protected:
 public:
     explicit Welcome(QWidget *parent = nullptr);
     ~Welcome() override;
-    QString getRootDir();
+    QStringList getRootDir();
 };
 
 #endif // WELCOME_H

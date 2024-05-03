@@ -4,6 +4,8 @@ Welcome::Welcome(QWidget *parent) : QDialog(parent) {
     imageLabel = new QLabel();
     welcomeLabel = new QLabel();
     tipLabel = new QLabel();
+    containedFile.clear();
+    images.clear();
     initUI();
     initSlots();
     setWindowTitle("Photos Selector");
@@ -57,7 +59,7 @@ void Welcome::keyPressEvent(QKeyEvent *event) {
 void Welcome::chooseRootFolder() {
     tipLabel->setText("");
     if (rootFolder.isEmpty()) {
-        rootFolder = QDir::homePath() + "/Pictures";
+        rootFolder=QDir::homePath() + "/Pictures";
     }
     QString title = "Choose a root folder 🙂";
     QString rootString = QFileDialog::getExistingDirectory(this, title, rootFolder);
@@ -79,8 +81,28 @@ void Welcome::chooseRootFolder() {
         tipLabel->setText(tip);
         return;
     }
-    rootFolder = rootString;
+    repeatCheck(root);
     this->accept();
+}
+
+void Welcome::repeatCheck(QDir files) {
+    files.setSorting(QDir::Size);
+    images.clear();
+    containedFile.clear();
+    for(auto fileInfo:files.entryInfoList()){
+        QString fileName = fileInfo.absoluteFilePath().toLower();
+        if(!(fileName.endsWith(".png")||fileName.endsWith(".jpg")||fileName.endsWith(".jpeg")||fileName.endsWith(".bmp")))continue;
+        QFile file(fileName);
+        if(file.open(QFile::ReadOnly)){
+            QByteArray byte = QCryptographicHash::hash(file.readAll(),QCryptographicHash::Md5);
+            if(containedFile.contains(byte)){
+                qDebug()<<"Found repeated file :"<<fileName;
+            }else{
+                images.push_back(fileName);
+                containedFile.insert(byte);
+            }
+        }
+    }
 }
 
 void Welcome::mousePressEvent(QMouseEvent *event) {
@@ -93,6 +115,6 @@ void Welcome::mousePressEvent(QMouseEvent *event) {
     }
 }
 
-QString Welcome::getRootDir() {
-    return rootFolder;
+QStringList Welcome::getRootDir() {
+    return images;
 }

@@ -37,7 +37,6 @@ private:
         bool isLocked;
     };
     // File System
-    QDir root;
     QFileInfoList fileInfoList;
     QFileInfoList::iterator currentFile;
     // Font
@@ -64,7 +63,7 @@ private:
 
     void keySelect(int x, int y);
 
-    void initValues(const QString &rootPath);
+    void initValues(const QStringList &rootPath);
 
     void initUI();
 
@@ -96,7 +95,7 @@ protected:
     void paintEvent(QPaintEvent *event) override;
 
 public:
-    explicit MainWindow(QWidget *parent = nullptr, const QString &rootPath = "");
+    explicit MainWindow(QWidget *parent = nullptr, const QStringList &rootPath = QStringList());
 
     ~MainWindow() override;
 
