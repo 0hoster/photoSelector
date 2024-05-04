@@ -21,9 +21,15 @@
 class Welcome : public QDialog {
 Q_OBJECT
 
+public:
+    struct Image {
+        QFileInfo file;
+        QByteArray md5;
+    };
+    typedef QList<Image> ImageList;
 private:
     QString rootFolder;
-    QStringList imagesResult;
+    ImageList imagesResult;
     QLabel *imageLabel;
     QLabel *welcomeLabel;
     QLabel *tipLabel;
@@ -47,7 +53,7 @@ public:
 
     ~Welcome() override;
 
-    QStringList getRootDir();
+    ImageList getRootDir();
 };
 
 #endif // WELCOME_H

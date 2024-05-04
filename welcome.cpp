@@ -106,7 +106,7 @@ bool Welcome::repeatCheck(QDir files) {
             if (containedFile.contains(byte)) {
                 repeatedFile.push_back(fileName);
             } else {
-                imagesResult.push_back(fileName);
+                imagesResult.push_back(Image{fileInfo, byte});
                 containedFile.insert(byte);
             }
         }
@@ -135,6 +135,6 @@ void Welcome::mousePressEvent(QMouseEvent *event) {
     }
 }
 
-QStringList Welcome::getRootDir() {
+Welcome::ImageList Welcome::getRootDir() {
     return imagesResult;
 }

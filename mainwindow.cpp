@@ -1,20 +1,23 @@
 #include "mainwindow.h"
 
-MainWindow::MainWindow(QWidget *parent, const QStringList &imageNames)
+MainWindow::MainWindow(QWidget *parent, const ImageList &imageNames)
         : QMainWindow(parent) {
     statusLabel = new QLabel;
     mainWidget = new QWidget;
     mainLayout = new QFormLayout;
     categoryLayout = new QFormLayout;
+    fileInfoList = imageNames;
+    currentFile = fileInfoList.begin();
+    currentImage = loadPixmap(currentFile->file.absoluteFilePath()).toImage();
     // Test data
     qDebug() << imageNames.size();
     assert(!imageNames.empty());
-
-    setWindowTitle("Photos Selector - " + imageNames[0]);
-    initValues(imageNames);
+    setSuitableScreenSize();
+    update();
+    setWindowTitle("Photos Selector - " + imageNames[0].file.fileName());
+    initValues();
     initUI();
     initSlots();
-    setSuitableScreenSize();
     updateCateShortcutDisplay();
     updateCategory();
 }
@@ -24,7 +27,7 @@ MainWindow::~MainWindow() {
     delete mainWidget;
 }
 
-void MainWindow::initValues(const QStringList &imageNames) {
+void MainWindow::initValues() {
     toKeys['a'] = Qt::Key_A, toKeys['b'] = Qt::Key_B;
     toKeys['c'] = Qt::Key_C, toKeys['d'] = Qt::Key_D;
     toKeys['e'] = Qt::Key_E, toKeys['f'] = Qt::Key_F;
@@ -44,11 +47,6 @@ void MainWindow::initValues(const QStringList &imageNames) {
     toKeys['7'] = Qt::Key_7, toKeys['8'] = Qt::Key_8;
     toKeys['9'] = Qt::Key_9, toKeys['0'] = Qt::Key_0;
 
-    for (const auto &i: imageNames) {
-        fileInfoList.push_back(QFileInfo(i));
-    }
-    currentFile = fileInfoList.begin();
-
     assert(frontKeys.size() <= keyMax && backKeys.size() <= keyMax);
 
     categoryPerPage = int(frontKeys.size()) * int(backKeys.size());
@@ -63,7 +61,7 @@ void MainWindow::initUI() {
         auto *item = new QLabel();
         categoryLayout->addRow(itemLabel, item);
     }
-    statusLabel->setText(currentFile->fileName());
+    statusLabel->setText(currentFile->file.fileName());
 
     mainLayout->addWidget(statusLabel);
     mainLayout->addItem(categoryLayout);
@@ -160,11 +158,16 @@ void MainWindow::initSlots() {
     });
 
     connect(this, &MainWindow::currentImageChange, this, &MainWindow::updateInfo);
+    connect(this, &MainWindow::selectedCategoryChange, this, &MainWindow::updateCategoryColor);
 }
 
 void MainWindow::paintEvent(QPaintEvent *event) {
     QPainter painter(this);
-    painter.drawPixmap(0, 0, loadPixmap(currentFile->absoluteFilePath()));
+    if (currentImage.size() != size()) {
+        qDebug() << "ReLoading";
+        currentImage = loadPixmap(currentFile->file.absoluteFilePath()).toImage();
+    }
+    painter.drawImage(0, 0, currentImage);
     event->accept();
 }
 
@@ -182,7 +185,7 @@ void MainWindow::setSuitableScreenSize() {
     QImageReader reader;
     int h = 0, w = 0;
     for (const auto &file: fileInfoList) {
-        reader.setFileName(file.absoluteFilePath());
+        reader.setFileName(file.file.absoluteFilePath());
         h = qMax(h, reader.size().height());
         w = qMax(w, reader.size().width());
     }
@@ -194,13 +197,14 @@ void MainWindow::setSuitableScreenSize() {
 }
 
 void MainWindow::updateInfo() {
-    statusLabel->setText(currentFile->fileName());
+    statusLabel->setText(currentFile->file.fileName());
+    currentImage = loadPixmap(currentFile->file.absoluteFilePath()).toImage();
+    updateCategoryColor();
     update();
 }
 
 void MainWindow::updateCateShortcutDisplay() {
-    long long total = qMin(categoryPerPage, categories.size() - currentCatePage * categoryPerPage);
-    assert(total >= 0);
+    int total = totalCateToDisplay();
     int index = 0;
     for (auto &frontKey: frontKeys) {
         for (auto backKey: backKeys) {
@@ -233,8 +237,7 @@ void MainWindow::updateCateShortcutDisplay() {
 }
 
 void MainWindow::updateCategory() {
-    long long total = qMin(categoryPerPage, categories.size() - currentCatePage * categoryPerPage);
-    assert(total >= 0);
+    int total = totalCateToDisplay();
 
     for (int i = 0; i < total; ++i) {
         setCategoryAt(i, categories[i + itemIndex()].content);
@@ -243,6 +246,45 @@ void MainWindow::updateCategory() {
         setCategoryAt(i, "");
     }
     updateCateShortcutDisplay();
+}
+
+void MainWindow::updateCategoryColor() {
+    int black = 0, white = 0, counter = 0;
+    int red, blue, green;
+    for (int i = 20; i < qMin(600, currentImage.width()); i += 5) {
+        for (int j = 20; j < qMin(400, currentImage.height()); j += 4) {
+            ++counter;
+            QRgb *pixel = (QRgb *) currentImage.constBits();
+            red = qRed(pixel[i * currentImage.width() + j]);
+            green = qGreen(pixel[i * currentImage.width() + j]);
+            blue = qBlue(pixel[i * currentImage.width() + j]);
+            if ((red + green + blue) > 225 * 3)++black;
+            else if ((red + green + blue) < 70 * 3)++white;
+        }
+    }
+    QColor labelFrontColor;
+    if (black * 3 > counter && white * 3 > counter) {
+        labelFrontColor = Qt::blue;
+    } else if (white * 3 > counter) {
+        labelFrontColor = Qt::white;
+    } else {
+        labelFrontColor = Qt::black;
+    }
+    QPalette palette = statusLabel->palette();
+    palette.setBrush(QPalette::Text, labelFrontColor);
+    statusLabel->setPalette(palette);
+    for (int index = 1; index < categoryLayout->count(); index += 2) {
+        auto *labelItem = qobject_cast<QLabel *>(categoryLayout->itemAt(index - 1)->widget());
+        auto *item = qobject_cast<QLabel *>(categoryLayout->itemAt(index)->widget());
+
+        if (item->property("selected") == true) {
+            palette.setBrush(QPalette::Text, selectedColor);
+        } else {
+            palette.setBrush(QPalette::Text, labelFrontColor);
+        }
+        labelItem->setPalette(palette);
+        item->setPalette(palette);
+    }
 }
 
 void MainWindow::setCategoryAt(int index, const QString &content, const QString &label) {

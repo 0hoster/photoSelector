@@ -1,6 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "welcome.h"
 #include <QMainWindow>
 #include <QString>
 #include <QLabel>
@@ -25,8 +26,12 @@
 #include <QImage>
 #include <QInputDialog>
 #include <QShortcut>
-#include <cstring>
 #include <QMessageBox>
+#include <QMultiHash>
+#include <QRgb>
+
+typedef Welcome::Image Image;
+typedef Welcome::ImageList ImageList;
 
 class MainWindow : public QMainWindow {
 Q_OBJECT
@@ -38,18 +43,19 @@ private:
         bool isLocked;
     };
     // File System
-    QFileInfoList fileInfoList;
-    QFileInfoList::iterator currentFile;
+    ImageList fileInfoList;
+    ImageList::iterator currentFile;
 
     // UI
-    QColor labelColor = Qt::black;
-    QColor currentColor = Qt::red;
+    QColor selectedColor = Qt::red;
     QLabel *statusLabel;
     QWidget *mainWidget;
     QFormLayout *mainLayout;
     QFormLayout *categoryLayout;
 
     // Category
+    QMultiHash<QByteArray, QString> imageToCategory;
+    QHash<QChar, Qt::Key> toKeys;
     QList<Cate> categories;
     const static int keyMax = 16;
     QList<Qt::Modifier> frontKeys = {Qt::CTRL, Qt::SHIFT, Qt::ALT, Qt::MODIFIER_MASK};
@@ -60,15 +66,20 @@ private:
     int categoryPerPage = 0;
 
     void createNewCate();
+
     void addCate(const QString &newCate, bool isLook = false);
 
     [[nodiscard]] int itemIndex() const { return categoryPerPage * currentCatePage; }
 
-    QHash<QChar, Qt::Key> toKeys;
+    [[nodiscard]] int totalCateToDisplay() const {
+        int total = qMin(categoryPerPage, int(categories.size()) - currentCatePage * categoryPerPage);
+        assert(total >= 0);
+        return total;
+    }
 
     void keySelect(int x, int y);
 
-    void initValues(const QStringList &rootPath);
+    void initValues();
 
     void initUI();
 
@@ -84,7 +95,12 @@ private:
 
     void updateCategory();
 
+    void updateCategoryColor();
+
     void updateCateShortcutDisplay();
+
+    // Pixmap
+    QImage currentImage;
 
     QPixmap loadPixmap(const QString &filename);
 
@@ -92,7 +108,7 @@ protected:
     void paintEvent(QPaintEvent *event) override;
 
 public:
-    explicit MainWindow(QWidget *parent = nullptr, const QStringList &rootPath = QStringList());
+    explicit MainWindow(QWidget *parent = nullptr, const ImageList &rootPath = QList<Welcome::Image>{});
 
     ~MainWindow() override;
 
@@ -100,7 +116,7 @@ signals:
 
     void currentImageChange();
 
-    void categoryEndChange();
+    void selectedCategoryChange();
 };
 
 #endif // MAINWINDOW_H
