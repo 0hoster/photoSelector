@@ -39,11 +39,14 @@ private:
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
-    void mousePressEvent(QMouseEvent *event)override;
+
+    void mousePressEvent(QMouseEvent *event) override;
 
 public:
     explicit Welcome(QWidget *parent = nullptr);
+
     ~Welcome() override;
+
     QStringList getRootDir();
 };
 

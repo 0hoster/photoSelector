@@ -40,27 +40,31 @@ private:
     // File System
     QFileInfoList fileInfoList;
     QFileInfoList::iterator currentFile;
+
     // UI
-    QColor labelColor;
+    QColor labelColor = Qt::black;
     QColor currentColor = Qt::red;
     QLabel *statusLabel;
     QWidget *mainWidget;
     QFormLayout *mainLayout;
     QFormLayout *categoryLayout;
+
     // Category
-    void createNewCate();
-    void addCate(const QString &newCate,bool isLook = false);
-    const static int keyMax = 16;
-    QList<Qt::Modifier> frontKeys = {Qt::CTRL, Qt::SHIFT, Qt::ALT,Qt::MODIFIER_MASK};
-    char backKeys[keyMax + 1] = "asdf";
     QList<Cate> categories;
+    const static int keyMax = 16;
+    QList<Qt::Modifier> frontKeys = {Qt::CTRL, Qt::SHIFT, Qt::ALT, Qt::MODIFIER_MASK};
+    QString backKeys = "asdf";
+
     int categoryEnd = 0;
     int currentCatePage = 0;
     int categoryPerPage = 0;
-    const static int LABEL_HEIGHT = 30;
-    // Maps
-    [[nodiscard]] int itemIndex() const{return categoryPerPage * currentCatePage;}
-    QHash<char, Qt::Key> toKeys;
+
+    void createNewCate();
+    void addCate(const QString &newCate, bool isLook = false);
+
+    [[nodiscard]] int itemIndex() const { return categoryPerPage * currentCatePage; }
+
+    QHash<QChar, Qt::Key> toKeys;
 
     void keySelect(int x, int y);
 
@@ -68,21 +72,19 @@ private:
 
     void initUI();
 
-    void initFont();
-
     void initSlots();
 
     void setSuitableScreenSize();
-
-    void updateInfo();
-
-    void updateCateShortcutDisplay();
 
     void setCategoryLabelAt(int index, const QString &label);
 
     void setCategoryAt(int index, const QString &content, const QString &label = nullptr);
 
+    void updateInfo();
+
     void updateCategory();
+
+    void updateCateShortcutDisplay();
 
     QPixmap loadPixmap(const QString &filename);
 

@@ -1,9 +1,7 @@
 #include "mainwindow.h"
 
 #include <QApplication>
-#include <QString>
 #include <QFont>
-#include <QFontDatabase>
 #include "welcome.h"
 
 int main(int argc, char *argv[]) {

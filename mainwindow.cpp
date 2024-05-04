@@ -6,9 +6,9 @@ MainWindow::MainWindow(QWidget *parent, const QStringList &imageNames)
     mainWidget = new QWidget;
     mainLayout = new QFormLayout;
     categoryLayout = new QFormLayout;
-    labelColor = QColor(Qt::black);
     // Test data
-    assert(imageNames.size()>0);
+    qDebug() << imageNames.size();
+    assert(!imageNames.empty());
 
     setWindowTitle("Photos Selector - " + imageNames[0]);
     initValues(imageNames);
@@ -44,15 +44,14 @@ void MainWindow::initValues(const QStringList &imageNames) {
     toKeys['7'] = Qt::Key_7, toKeys['8'] = Qt::Key_8;
     toKeys['9'] = Qt::Key_9, toKeys['0'] = Qt::Key_0;
 
-    for(const auto& i:imageNames){
+    for (const auto &i: imageNames) {
         fileInfoList.push_back(QFileInfo(i));
     }
     currentFile = fileInfoList.begin();
 
-    assert(frontKeys.size() <= keyMax && strlen(backKeys) <= keyMax);
+    assert(frontKeys.size() <= keyMax && backKeys.size() <= keyMax);
 
-    categoryPerPage = int(frontKeys.size()) * std::strlen(backKeys);
-    // 不可避免
+    categoryPerPage = int(frontKeys.size()) * int(backKeys.size());
 }
 
 void MainWindow::initUI() {
@@ -74,7 +73,7 @@ void MainWindow::initUI() {
 }
 
 void MainWindow::keySelect(int x, int y) {
-    int index = itemIndex() + x * (int) strlen(backKeys) + y;
+    int index = itemIndex() + x * (int) backKeys.size() + y;
     if (index >= categories.size())return;
     qDebug() << categories[index].content;
 }
@@ -82,7 +81,7 @@ void MainWindow::keySelect(int x, int y) {
 void MainWindow::initSlots() {
     auto *imageNext = new QShortcut(QKeySequence(Qt::Key_Right), this);
     auto *imageNextB = new QShortcut(QKeySequence(Qt::Key_Return), this);
-    auto doImageNext =[this]() {
+    auto doImageNext = [this]() {
         ++currentFile;
         if (currentFile == fileInfoList.end())currentFile = fileInfoList.begin();
         emit currentImageChange();
@@ -91,20 +90,20 @@ void MainWindow::initSlots() {
     connect(imageNextB, &QShortcut::activated, this, doImageNext);
 
     auto *imagePrevious = new QShortcut(QKeySequence(Qt::Key_Left), this);
-    connect(imagePrevious, &QShortcut::activated, this,[this]() {
+    connect(imagePrevious, &QShortcut::activated, this, [this]() {
         if (currentFile == fileInfoList.begin())currentFile = fileInfoList.end();
         --currentFile;
         emit currentImageChange();
     });
     auto *imageTop = new QShortcut(QKeySequence(Qt::Key_Up), this);
-    connect(imageTop, &QShortcut::activated, this,[this]() {
+    connect(imageTop, &QShortcut::activated, this, [this]() {
         // First image
         currentFile = fileInfoList.begin();
         emit currentImageChange();
     });
 
     auto *imageBottom = new QShortcut(QKeySequence(Qt::Key_Down), this);
-    connect(imageBottom, &QShortcut::activated, this,[this]() {
+    connect(imageBottom, &QShortcut::activated, this, [this]() {
         // Last image
         currentFile = fileInfoList.end() - 1;
         emit currentImageChange();
@@ -112,39 +111,39 @@ void MainWindow::initSlots() {
 
 
     auto *catePreviousPage = new QShortcut(QKeySequence(Qt::Key_K), this);
-    connect(catePreviousPage, &QShortcut::activated, this,[this]() {
+    connect(catePreviousPage, &QShortcut::activated, this, [this]() {
         --currentCatePage;
         if (currentCatePage <= -1)currentCatePage = categoryEnd - 1;
         updateCategory();
     });
 
     auto *cateNextPage = new QShortcut(QKeySequence(Qt::Key_J), this);
-    connect(cateNextPage, &QShortcut::activated, this,[this]() {
+    connect(cateNextPage, &QShortcut::activated, this, [this]() {
         ++currentCatePage;
         if (currentCatePage >= categoryEnd)currentCatePage = 0;
         updateCategory();
     });
 
     auto *cateTopPage = new QShortcut(QKeySequence(Qt::Key_K | Qt::SHIFT), this);
-    connect(cateTopPage, &QShortcut::activated, this,[this]() {
+    connect(cateTopPage, &QShortcut::activated, this, [this]() {
         currentCatePage = 0;
         updateCategory();
     });
 
     auto *cateBottomPage = new QShortcut(QKeySequence(Qt::Key_J | Qt::SHIFT), this);
-    connect(cateBottomPage, &QShortcut::activated, this,[this]() {
+    connect(cateBottomPage, &QShortcut::activated, this, [this]() {
         currentCatePage = categoryEnd - 1;
         updateCategory();
     });
 
     auto *cateNew = new QShortcut(QKeySequence(Qt::Key_N), this);
-    connect(cateNew, &QShortcut::activated, this,[this]() {
+    connect(cateNew, &QShortcut::activated, this, [this]() {
         createNewCate();
         updateCategory();
     });
 
     for (int i = 0; i < frontKeys.size(); ++i) {
-        for (int j = 0; j < strlen(backKeys); ++j) {
+        for (int j = 0; j < backKeys.size(); ++j) {
             QShortcut *select;
             if (frontKeys[i] == Qt::MODIFIER_MASK) {
                 select = new QShortcut(QKeySequence(toKeys[backKeys[j]]), this);
@@ -156,7 +155,7 @@ void MainWindow::initSlots() {
     }
 
     auto *windowClose = new QShortcut(QKeySequence(Qt::Key_Q), this);
-    connect(windowClose, &QShortcut::activated, this,[this]() {
+    connect(windowClose, &QShortcut::activated, this, [this]() {
         this->close();
     });
 
@@ -202,12 +201,11 @@ void MainWindow::updateInfo() {
 void MainWindow::updateCateShortcutDisplay() {
     long long total = qMin(categoryPerPage, categories.size() - currentCatePage * categoryPerPage);
     assert(total >= 0);
-    qDebug()<<"total"<<total;
     int index = 0;
     for (auto &frontKey: frontKeys) {
-        for (int j = 0; j < strlen(backKeys); ++j) {
-            if(index>=total){
-                setCategoryLabelAt(index,"");
+        for (auto backKey: backKeys) {
+            if (index >= total) {
+                setCategoryLabelAt(index, "");
                 ++index;
                 continue;
             }
@@ -228,7 +226,7 @@ void MainWindow::updateCateShortcutDisplay() {
                 case Qt::MODIFIER_MASK:
                     break;
             }
-            setCategoryLabelAt(index, cut + backKeys[j]);
+            setCategoryLabelAt(index, cut + backKey);
             ++index;
         }
     }
@@ -266,32 +264,33 @@ void MainWindow::setCategoryLabelAt(int index, const QString &label) {
 void MainWindow::createNewCate() {
     bool ok = false;
     QString newCate = QInputDialog::getText(this, "New Category", "What 's the new category? 😝", \
-                                            QLineEdit::Normal, "", &ok,isFullScreen()? Qt::FramelessWindowHint:Qt::Dialog);
+                                            QLineEdit::Normal, "", &ok,
+                                            isFullScreen() ? Qt::FramelessWindowHint : Qt::Dialog);
     if (ok) {
-        if(newCate.isEmpty()){
-            QMessageBox::about(this,"Hey man","You enter an EMPTY string, are you serious?");
+        if (newCate.isEmpty()) {
+            QMessageBox::about(this, "Hey man", "You enter an EMPTY string, are you serious?");
             return;
         }
-        auto isRepeated = [this,newCate](){
-            for(const auto &i:categories){
-                if(i.content==newCate){
-                    return true;
-                }
+        auto isRepeated = [this, newCate]() {
+            if (std::any_of(categories.begin(), categories.end(),
+                            [newCate](const Cate &i) { return i.content == newCate; })) {
+                return true;
             }
             return false;
         };
-        if(newCate.isEmpty()||isRepeated()){
-            QMessageBox::about(this,"Notice here",QString("You enter the category `%1`, which is already in queue.").arg(newCate));
+        if (newCate.isEmpty() || isRepeated()) {
+            QMessageBox::about(this, "Notice here",
+                               QString("You enter the category `%1`, which is already in queue.").arg(newCate));
             return;
         }
-        addCate(newCate,false);
+        addCate(newCate, false);
         updateCategory();
     }
 }
 
-void MainWindow::addCate(const QString &newCate,bool isLock){
-    categories.push_back(Cate{newCate,0,isLock});
-    while(categoryEnd*categoryPerPage<categories.size())++categoryEnd;
+void MainWindow::addCate(const QString &newCate, bool isLock) {
+    categories.push_back(Cate{newCate, 0, isLock});
+    while (categoryEnd * categoryPerPage < categories.size())++categoryEnd;
 }
 
 

@@ -59,11 +59,11 @@ void Welcome::keyPressEvent(QKeyEvent *event) {
 void Welcome::chooseRootFolder() {
     tipLabel->setText("");
     if (rootFolder.isEmpty()) {
-        rootFolder=QDir::homePath() + "/Pictures";
+        rootFolder = QDir::homePath() + "/Pictures";
     }
     QString title = "Choose a root folder 🙂";
     QString rootString = QFileDialog::getExistingDirectory(this, title, rootFolder);
-    if(rootString.isEmpty())return;
+    if (rootString.isEmpty())return;
 
     // Test if correct
 
@@ -81,7 +81,7 @@ void Welcome::chooseRootFolder() {
         tipLabel->setText(tip);
         return;
     }
-    if(repeatCheck(root))
+    if (repeatCheck(root))
         this->accept();
 }
 
@@ -90,27 +90,35 @@ bool Welcome::repeatCheck(QDir files) {
     imagesResult.clear();
     containedFile.clear();
     QStringList repeatedFile;
-    for(const auto &fileInfo:files.entryInfoList()){
-        QString fileName = fileInfo.absoluteFilePath().toLower();
-        if(!(fileName.endsWith(".png")||fileName.endsWith(".jpg")||fileName.endsWith(".jpeg")||fileName.endsWith(".bmp")))continue;
+
+    for (const auto &fileInfo: files.entryInfoList()) {
+        QString fileName = fileInfo.absoluteFilePath();
+
+        QString fileNameLowered = fileName.toLower();
+        bool isImage = fileNameLowered.endsWith(".png") || fileNameLowered.endsWith(".jpg")
+                       || fileNameLowered.endsWith(".jpeg")
+                       || fileNameLowered.endsWith(".bmp");
+        if (!isImage)continue; // Skip non-image file
+
         QFile file(fileName);
-        if(file.open(QFile::ReadOnly)){
-            QByteArray byte = QCryptographicHash::hash(file.readAll(),QCryptographicHash::Md5);
-            if(containedFile.contains(byte)){
+        if (file.open(QFile::ReadOnly)) {
+            QByteArray byte = QCryptographicHash::hash(file.readAll(), QCryptographicHash::Md5);
+            if (containedFile.contains(byte)) {
                 repeatedFile.push_back(fileName);
-            }else{
+            } else {
                 imagesResult.push_back(fileName);
                 containedFile.insert(byte);
             }
         }
     }
-    if(repeatedFile.size()){
+    if (!repeatedFile.empty()) {
         QString notice = "Notice that these photos are totally copies of ones before.\n";
-        for(const auto &i:repeatedFile){
-            notice.push_back("- "+i+"\n");
+        for (const auto &i: repeatedFile) {
+            notice.push_back("- " + i + "\n");
         }
-        auto result = QMessageBox::information(this,"Repeated files detected",notice,QMessageBox::Ok|QMessageBox::Cancel);
-        if(result==QMessageBox::Cancel){
+        auto result = QMessageBox::information(this, "Repeated files detected", notice,
+                                               QMessageBox::Ok | QMessageBox::Cancel);
+        if (result == QMessageBox::Cancel) {
             return false;
         }
     }
