@@ -27,12 +27,9 @@
 #include <QInputDialog>
 #include <QShortcut>
 #include <QMessageBox>
-#include <QMultiHash>
 #include <QRgb>
 
-typedef Welcome::Image Image;
-typedef Welcome::ImageList ImageList;
-
+typedef QString ImageName;
 class MainWindow : public QMainWindow {
 Q_OBJECT
 
@@ -48,17 +45,20 @@ private:
 
     // UI
     QColor selectedColor = Qt::red;
+    QColor colorfulGrey = QColor(210, 122, 45);
+    QColor blackGrey = QColor(51, 51, 51);
+    QColor whiteGrey = QColor(217, 217, 217);
     QLabel *statusLabel;
     QWidget *mainWidget;
     QFormLayout *mainLayout;
     QFormLayout *categoryLayout;
 
     // Category
-    QMultiHash<QByteArray, QString> imageToCategory;
+    QHash<ImageName , QSet<QString>> imageToCategory;
     QHash<QChar, Qt::Key> toKeys;
     QList<Cate> categories;
     const static int keyMax = 16;
-    QList<Qt::Modifier> frontKeys = {Qt::CTRL, Qt::SHIFT, Qt::ALT, Qt::MODIFIER_MASK};
+    QList<Qt::Modifier> frontKeys = {Qt::MODIFIER_MASK,Qt::CTRL, Qt::ALT, Qt::SHIFT,  };
     QString backKeys = "asdf";
 
     int categoryEnd = 0;
@@ -95,20 +95,23 @@ private:
 
     void updateCategory();
 
+    void updateCategoryColorStatus();
+
     void updateCategoryColor();
 
     void updateCateShortcutDisplay();
 
-    // Pixmap
-    QImage currentImage;
+    void finalize();
 
-    QPixmap loadPixmap(const QString &filename);
+    // Pixmap
+
+    QImage loadScaledImage(QSize size,const QString& filename = "");
 
 protected:
     void paintEvent(QPaintEvent *event) override;
 
 public:
-    explicit MainWindow(QWidget *parent = nullptr, const ImageList &rootPath = QList<Welcome::Image>{});
+    explicit MainWindow(QWidget *parent = nullptr, const ImageList &rootPath = ImageList {});
 
     ~MainWindow() override;
 

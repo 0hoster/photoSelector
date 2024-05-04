@@ -8,18 +8,18 @@ MainWindow::MainWindow(QWidget *parent, const ImageList &imageNames)
     categoryLayout = new QFormLayout;
     fileInfoList = imageNames;
     currentFile = fileInfoList.begin();
-    currentImage = loadPixmap(currentFile->file.absoluteFilePath()).toImage();
     // Test data
     qDebug() << imageNames.size();
     assert(!imageNames.empty());
     setSuitableScreenSize();
     update();
-    setWindowTitle("Photos Selector - " + imageNames[0].file.fileName());
+    setWindowTitle("Photos Selector - " + imageNames[0].fileName());
     initValues();
     initUI();
     initSlots();
     updateCateShortcutDisplay();
     updateCategory();
+    emit currentImageChange();
 }
 
 MainWindow::~MainWindow() {
@@ -56,12 +56,18 @@ void MainWindow::initUI() {
     categoryLayout->setVerticalSpacing(5);
     categoryLayout->setHorizontalSpacing(5);
 
+    QFont font;
+    font.setPixelSize(20);
+    font.setBold(true);
     for (int i = 0; i < categoryPerPage; ++i) {
         auto *itemLabel = new QLabel();
         auto *item = new QLabel();
+        item->setFont(font);
+        itemLabel->setFont(font);
         categoryLayout->addRow(itemLabel, item);
     }
-    statusLabel->setText(currentFile->file.fileName());
+    statusLabel->setFont(font);
+    statusLabel->setText(currentFile->fileName());
 
     mainLayout->addWidget(statusLabel);
     mainLayout->addItem(categoryLayout);
@@ -71,9 +77,25 @@ void MainWindow::initUI() {
 }
 
 void MainWindow::keySelect(int x, int y) {
-    int index = itemIndex() + x * (int) backKeys.size() + y;
+    int offset = x * (int) backKeys.size() + y;
+    int index = itemIndex() + offset;
     if (index >= categories.size())return;
-    qDebug() << categories[index].content;
+    auto *selectedItem = qobject_cast<QLabel *>(categoryLayout->itemAt(offset * 2 + 1)->widget());
+    if (selectedItem->property("selected") != true) {
+        qDebug() << "New selected" << categories[index].content;
+
+        imageToCategory[currentFile->absoluteFilePath()].insert(categories[index].content);
+        selectedItem->setProperty("selected", true);
+        ++categories[index].count;
+    } else {
+        qDebug() << "cancel selected" << categories[index].content;
+
+        imageToCategory[currentFile->absoluteFilePath()].remove(categories[index].content);
+        selectedItem->setProperty("selected", false);
+        --categories[index].count;
+        assert(categories[index].count >= 0);
+    }
+    updateCategoryColor();
 }
 
 void MainWindow::initSlots() {
@@ -157,35 +179,35 @@ void MainWindow::initSlots() {
         this->close();
     });
 
+    auto *doFinalize = new QShortcut(QKeySequence(Qt::ALT | Qt::Key_Return), this);
+    connect(doFinalize, &QShortcut::activated, this, [this]() {
+        finalize();
+    });
+
     connect(this, &MainWindow::currentImageChange, this, &MainWindow::updateInfo);
     connect(this, &MainWindow::selectedCategoryChange, this, &MainWindow::updateCategoryColor);
 }
 
 void MainWindow::paintEvent(QPaintEvent *event) {
     QPainter painter(this);
-    if (currentImage.size() != size()) {
-        qDebug() << "ReLoading";
-        currentImage = loadPixmap(currentFile->file.absoluteFilePath()).toImage();
-    }
-    painter.drawImage(0, 0, currentImage);
+    painter.drawImage(0, 0, loadScaledImage(size()));
     event->accept();
 }
 
-QPixmap MainWindow::loadPixmap(const QString &filename) {
-    QImageReader reader(filename);
-    reader.setAutoTransform(true);
-    QSize imageSize = reader.size();
-
-    QSize scaledSize = imageSize.scaled(this->width(), this->height(), Qt::KeepAspectRatio);
-    reader.setScaledSize(scaledSize);
-    return QPixmap::fromImageReader(&reader);
+QImage MainWindow::loadScaledImage(QSize size, const QString &filename) {
+    QImageReader ImageReader(filename == "" ? currentFile->absoluteFilePath() : filename);
+    ImageReader.setAutoTransform(true);
+    QSize imageSize = ImageReader.size();
+    QSize scaledSize = imageSize.scaled(size, Qt::KeepAspectRatio);
+    ImageReader.setScaledSize(scaledSize);
+    return ImageReader.read();
 }
 
 void MainWindow::setSuitableScreenSize() {
     QImageReader reader;
     int h = 0, w = 0;
     for (const auto &file: fileInfoList) {
-        reader.setFileName(file.file.absoluteFilePath());
+        reader.setFileName(file.absoluteFilePath());
         h = qMax(h, reader.size().height());
         w = qMax(w, reader.size().width());
     }
@@ -197,9 +219,8 @@ void MainWindow::setSuitableScreenSize() {
 }
 
 void MainWindow::updateInfo() {
-    statusLabel->setText(currentFile->file.fileName());
-    currentImage = loadPixmap(currentFile->file.absoluteFilePath()).toImage();
-    updateCategoryColor();
+    statusLabel->setText(currentFile->fileName());
+    updateCategoryColorStatus();
     update();
 }
 
@@ -248,11 +269,22 @@ void MainWindow::updateCategory() {
     updateCateShortcutDisplay();
 }
 
+void MainWindow::updateCategoryColorStatus() {
+    int total = totalCateToDisplay();
+    for (int i = 0; i < total; ++i) {
+        auto *labelItem = qobject_cast<QLabel *>(categoryLayout->itemAt(2 * i + 1)->widget());
+        bool isExist = imageToCategory[currentFile->absoluteFilePath()].contains(categories[i + itemIndex()].content);
+        labelItem->setProperty("selected", isExist);
+    }
+    updateCategoryColor();
+}
+
 void MainWindow::updateCategoryColor() {
     int black = 0, white = 0, counter = 0;
     int red, blue, green;
-    for (int i = 20; i < qMin(600, currentImage.width()); i += 5) {
-        for (int j = 20; j < qMin(400, currentImage.height()); j += 4) {
+    QImage currentImage = loadScaledImage(size().scaled(1920 / 4, 1080 / 4, Qt::KeepAspectRatio));
+    for (int i = 0; i < currentImage.height() >> 1; i += 5) {
+        for (int j = 0; j < currentImage.width() >> 2; j += 5) {
             ++counter;
             QRgb *pixel = (QRgb *) currentImage.constBits();
             red = qRed(pixel[i * currentImage.width() + j]);
@@ -264,23 +296,23 @@ void MainWindow::updateCategoryColor() {
     }
     QColor labelFrontColor;
     if (black * 3 > counter && white * 3 > counter) {
-        labelFrontColor = Qt::blue;
+        labelFrontColor = colorfulGrey;
     } else if (white * 3 > counter) {
-        labelFrontColor = Qt::white;
+        labelFrontColor = whiteGrey;
     } else {
-        labelFrontColor = Qt::black;
+        labelFrontColor = blackGrey;
     }
     QPalette palette = statusLabel->palette();
-    palette.setBrush(QPalette::Text, labelFrontColor);
+    palette.setBrush(QPalette::WindowText, labelFrontColor);
     statusLabel->setPalette(palette);
     for (int index = 1; index < categoryLayout->count(); index += 2) {
         auto *labelItem = qobject_cast<QLabel *>(categoryLayout->itemAt(index - 1)->widget());
         auto *item = qobject_cast<QLabel *>(categoryLayout->itemAt(index)->widget());
 
         if (item->property("selected") == true) {
-            palette.setBrush(QPalette::Text, selectedColor);
+            palette.setBrush(QPalette::WindowText, selectedColor);
         } else {
-            palette.setBrush(QPalette::Text, labelFrontColor);
+            palette.setBrush(QPalette::WindowText, labelFrontColor);
         }
         labelItem->setPalette(palette);
         item->setPalette(palette);
@@ -333,6 +365,16 @@ void MainWindow::createNewCate() {
 void MainWindow::addCate(const QString &newCate, bool isLock) {
     categories.push_back(Cate{newCate, 0, isLock});
     while (categoryEnd * categoryPerPage < categories.size())++categoryEnd;
+}
+
+void MainWindow::finalize() {
+    for (auto i = imageToCategory.constBegin(); i != imageToCategory.constEnd(); ++i) {
+        qDebug() << i.key();
+        for (const auto &j: i.value()) {
+            qDebug() << "\t" << j;
+        }
+    }
+
 }
 
 

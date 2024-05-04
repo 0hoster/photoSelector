@@ -18,22 +18,20 @@
 #include <QCryptographicHash>
 #include <QMessageBox>
 
+typedef QFileInfo Image;
+typedef QList<QFileInfo> ImageList;
+typedef QSet<QByteArray> ImageSet;
+
 class Welcome : public QDialog {
 Q_OBJECT
 
-public:
-    struct Image {
-        QFileInfo file;
-        QByteArray md5;
-    };
-    typedef QList<Image> ImageList;
 private:
     QString rootFolder;
     ImageList imagesResult;
     QLabel *imageLabel;
     QLabel *welcomeLabel;
     QLabel *tipLabel;
-    QSet<QByteArray> containedFile;
+    ImageSet containedFile;
 
     void initUI();
 
@@ -53,7 +51,9 @@ public:
 
     ~Welcome() override;
 
-    ImageList getRootDir();
+    ImageList getRootDir() { return imagesResult; };
+
+    ImageSet getImageSet() { return containedFile; };
 };
 
 #endif // WELCOME_H
