@@ -369,18 +369,21 @@ void MainWindow::addCate(const QString &newCate, bool isLock) {
 
 void MainWindow::finalize() {
     QJsonObject mainData;
-    QJsonObject imageData;
+    QJsonArray imagesData;
     for (auto image = imageToCategory.constBegin(); image != imageToCategory.constEnd(); ++image) {
-        QJsonArray categoriesData;
+        QJsonObject imageData;
+        QJsonArray categoryData;
         for (const auto &category: image.value()) {
-            categoriesData.push_back(category);
+            categoryData.push_back(category);
         }
-        imageData[image.key()] = categoriesData;
+        imageData["filename"] = image.key();
+        imageData["category"] = categoryData;
+        imagesData.push_back(imageData);
     }
-    mainData["images"] = imageData;
+    mainData["images"] = imagesData;
     QJsonDocument document(mainData);
     QFile output("output.json");
-    if(output.open(QIODeviceBase::WriteOnly)){
+    if (output.open(QIODeviceBase::WriteOnly)) {
         output.write(document.toJson(QJsonDocument::Indented));
     }
     output.close();
