@@ -28,6 +28,10 @@
 #include <QShortcut>
 #include <QMessageBox>
 #include <QRgb>
+#include <QJsonValue>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonDocument>
 
 typedef QString ImageName;
 class MainWindow : public QMainWindow {

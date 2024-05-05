@@ -368,13 +368,23 @@ void MainWindow::addCate(const QString &newCate, bool isLock) {
 }
 
 void MainWindow::finalize() {
-    for (auto i = imageToCategory.constBegin(); i != imageToCategory.constEnd(); ++i) {
-        qDebug() << i.key();
-        for (const auto &j: i.value()) {
-            qDebug() << "\t" << j;
+    QJsonObject mainData;
+    QJsonObject imageData;
+    for (auto image = imageToCategory.constBegin(); image != imageToCategory.constEnd(); ++image) {
+        QJsonArray categoriesData;
+        for (const auto &category: image.value()) {
+            categoriesData.push_back(category);
         }
+        imageData[image.key()] = categoriesData;
     }
-
+    mainData["images"] = imageData;
+    QJsonDocument document(mainData);
+    QFile output("output.json");
+    if(output.open(QIODeviceBase::WriteOnly)){
+        output.write(document.toJson(QJsonDocument::Indented));
+    }
+    output.close();
+    qDebug() << document.toJson(QJsonDocument::Compact);
 }
 
 
