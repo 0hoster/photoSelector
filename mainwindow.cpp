@@ -295,12 +295,12 @@ void MainWindow::updateCategoryColor() {
         }
     }
     QColor labelFrontColor;
-    if (black * 3 > counter && white * 3 > counter) {
-        labelFrontColor = colorfulGrey;
+    if (black * 3 > counter) {
+        labelFrontColor = blackGrey;
     } else if (white * 3 > counter) {
         labelFrontColor = whiteGrey;
     } else {
-        labelFrontColor = blackGrey;
+        labelFrontColor = colorfulGrey;
     }
     QPalette palette = statusLabel->palette();
     palette.setBrush(QPalette::WindowText, labelFrontColor);
@@ -381,8 +381,21 @@ void MainWindow::finalize() {
         imagesData.push_back(imageData);
     }
     mainData["images"] = imagesData;
+
+    QJsonArray categoriesData;
+    for (const auto &category: categories) {
+        QJsonObject categoryData = {
+                {"content", category.content},
+                {"count", category.count},
+                {"isLock", category.isLocked}
+
+        };
+        categoriesData.push_back(categoryData);
+    }
+
+    mainData["category"] = categoriesData;
     QJsonDocument document(mainData);
-    QFile output("output.json");
+    QFile output("assets.json");
     if (output.open(QIODeviceBase::WriteOnly)) {
         output.write(document.toJson(QJsonDocument::Indented));
     }

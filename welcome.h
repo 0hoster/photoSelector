@@ -16,6 +16,7 @@
 #include <QPalette>
 #include <QSet>
 #include <QCryptographicHash>
+#include <QCoreApplication> // temp solution
 #include <QMessageBox>
 
 typedef QFileInfo Image;

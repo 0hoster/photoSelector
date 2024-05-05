@@ -14,7 +14,7 @@ request.onreadystatechange = function () {
         init();
     }
 }
-request.open('GET', `/assess.json`, true);
+request.open('GET', `/assets.json`, true);
 request.send();
 
 async function preloadImages() {
@@ -58,7 +58,22 @@ function switchTo(index) {
     currentIndex = index;
     front.src = `/${data["images"][index]["filename"]}`;
     background.src = `/${data["images"][index]["filename"]}`;
+    updateInfo();
     updateImageSize();
+}
+
+function updateInfo() {
+    let title = document.querySelector("#imageName");
+    let list = document.querySelector("#property");
+    title.innerText = `/${data["images"][currentIndex]["filename"]}`;
+    while (list.firstChild) {
+        list.removeChild(list.firstChild);
+    }
+    for (let i = 0; i < data["images"][currentIndex]["category"].length; ++i) {
+        list.appendChild(document.createElement("li"));
+        list.lastChild.innerText = data["images"][currentIndex]["category"][i];
+
+    }
 }
 
 function updateImageSize() {
@@ -84,6 +99,11 @@ document.onkeydown = function (e) {
             switchTo(totalImages() - 1);
             break;
 
+        case "Enter":
+            let shadow = document.querySelector("#shadow");
+            if(shadow.classList.contains("hide"))shadow.classList.remove("hide");
+            else shadow.classList.add("hide");
+
     }
 }
 
@@ -97,3 +117,5 @@ window.onresize = function () {
     updateImageSize();
 
 }
+
+// [fix me] incorrect size display

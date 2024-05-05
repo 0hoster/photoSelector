@@ -81,15 +81,15 @@ void Welcome::chooseRootFolder() {
         tipLabel->setText(tip);
         return;
     }
-    if (repeatCheck(root))
-        this->accept();
+    repeatCheck(root);
+    this->accept();
 }
 
 bool Welcome::repeatCheck(QDir files) {
     files.setSorting(QDir::Size);
     imagesResult.clear();
     containedFile.clear();
-    QStringList repeatedFile;
+    QList<QString> repeatedFile;
 
     for (const auto &fileInfo: files.entryInfoList()) {
         QString fileName = fileInfo.absoluteFilePath();
@@ -100,26 +100,29 @@ bool Welcome::repeatCheck(QDir files) {
                        || fileNameLowered.endsWith(".bmp");
         if (!isImage)continue; // Skip non-image file
 
-        QFile file(fileName);
-        if (file.open(QFile::ReadOnly)) {
-            QByteArray byte = QCryptographicHash::hash(file.readAll(), QCryptographicHash::Md5);
-            if (containedFile.contains(byte)) {
-                repeatedFile.push_back(fileName);
-            } else {
-                imagesResult.push_back(fileInfo);
-                containedFile.insert(byte);
-            }
-        }
+//        QFile file(fileName);
+//        if (file.open(QFile::ReadOnly)) {
+//            QByteArray byte = QCryptographicHash::hash(file.readAll(), QCryptographicHash::Md5);
+//            QCoreApplication::processEvents();
+//            if (containedFile.contains(byte)) {
+//                repeatedFile.push_back(fileName);
+//            } else {
+//                imagesResult.push_back(fileInfo);
+//                containedFile.insert(byte);
+//            }
+//        }
+        imagesResult.push_back(fileInfo);
     }
     if (!repeatedFile.empty()) {
-        QString notice = "Notice that these photos are totally copies of ones before.\n";
-        for (const auto &i: repeatedFile) {
-            notice.push_back("- " + i + "\n");
-        }
+        QString notice = "Notice that there are %1 copies of photos exits.\nWould you like to REMOVE them?";
+        notice = notice.arg(repeatedFile.size());
+
         auto result = QMessageBox::information(this, "Repeated files detected", notice,
                                                QMessageBox::Ok | QMessageBox::Cancel);
-        if (result == QMessageBox::Cancel) {
-            return false;
+        if (result == QMessageBox::Ok) {
+            for (const auto &i: repeatedFile) {
+                files.remove(i);
+            }
         }
     }
     return true;
